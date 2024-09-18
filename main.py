@@ -1,92 +1,220 @@
-import random
+import os
+import time
 
-# Constants for the board size
-BOARD_SIZE = 5
+import click
+from stable_baselines import DQN
+from stable_baselines.common.callbacks import CheckpointCallback
+from stable_baselines.deepq.policies import FeedForwardPolicy
 
-# Symbols for the board
-EMPTY = "-"
-SHIP = "S"
-HIT = "X"
-MISS = "O"
+from game.env import ACTIONS
+from game.env import QWOPEnv
+from pretrain import imitation_learning
+from pretrain import recorder
 
-# Create an empty board
-def create_board():
-    return [[EMPTY for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
+# from agents.DQNfD import DQN
 
-# Display the board (for debugging or visualizing)
-def print_board(board):
-    for row in board:
-        print(" ".join(row))
-    print("\n")
 
-# Randomly place ships on the board
-def place_ships(board, num_ships):
-    ships_placed = 0
-    while ships_placed < num_ships:
-        row = random.randint(0, BOARD_SIZE - 1)
-        col = random.randint(0, BOARD_SIZE - 1)
-        if board[row][col] == EMPTY:
-            board[row][col] = SHIP
-            ships_placed += 1
+# Training parameters
+MODEL_NAME = 'FastDQN_2hr'
+EXPLORATION_FRACTION = 0.3
+LEARNING_STARTS = 3000
+EXPLORATION_INITIAL_EPS = 0.01
+EXPLORATION_FINAL_EPS = 0.001
+BUFFER_SIZE = 300000
+BATCH_SIZE = 64
+TRAIN_FREQ = 4
+LEARNING_RATE = 0.0001
+TRAIN_TIME_STEPS = 600000
+MODEL_PATH = os.path.join('models', MODEL_NAME)
+TENSORBOARD_PATH = './tensorboard/'
 
-# Player fires at the board
-def fire(board, row, col):
-    if board[row][col] == SHIP:
-        board[row][col] = HIT
-        return "Hit!"
-    elif board[row][col] == EMPTY:
-        board[row][col] = MISS
-        return "Miss!"
+# Checkpoint callback
+checkpoint_callback = CheckpointCallback(
+    save_freq=100000, save_path='./logs/', name_prefix=MODEL_NAME
+)
+
+# Imitation learning parameters
+RECORD_PATH = os.path.join('pretrain', 'kuro_1_to_5')
+N_EPISODES = 10
+N_EPOCHS = 500
+PRETRAIN_LEARNING_RATE = 0.00001  # 0.0001
+
+
+class CustomDQNPolicy(FeedForwardPolicy):
+    def __init__(self, *args, **kwargs):
+        super(CustomDQNPolicy, self).__init__(
+            *args,
+            **kwargs,
+            layers=[256, 128],
+            layer_norm=True,
+            feature_extraction="mlp",
+        )
+
+
+def get_new_model():
+
+    # Initialize env and model
+    env = QWOPEnv()
+    model = DQN(
+        CustomDQNPolicy,
+        env,
+        prioritized_replay=True,
+        verbose=1,
+        tensorboard_log=TENSORBOARD_PATH,
+    )
+
+    return model
+
+
+def get_existing_model(model_path):
+
+    print('--- Training from existing model', model_path, '---')
+
+    # Load model
+    model = DQN.load(model_path, tensorboard_log=TENSORBOARD_PATH)
+
+    # Set environment
+    env = QWOPEnv()  # SubprocVecEnv([lambda: QWOPEnv()])
+    model.set_env(env)
+
+    return model
+
+
+def get_model(model_path):
+
+    if os.path.isfile(model_path + '.zip'):
+        model = get_existing_model(model_path)
     else:
-        return "Already fired there!"
+        model = get_new_model()
 
-# Check if all ships are sunk
-def all_ships_sunk(board):
-    for row in board:
-        if SHIP in row:
-            return False
-    return True
+    return model
 
-# Main game loop
-def play_game():
-    player_board = create_board()
-    ai_board = create_board()
 
-    # Place ships for player and AI (for now random)
-    place_ships(player_board, 3)
-    place_ships(ai_board, 3)
+def run_train(model_path=MODEL_PATH):
 
-    game_over = False
-    while not game_over:
-        # Display boards (for now both visible)
-        print("Your board:")
-        print_board(player_board)
-        print("AI board:")
-        print_board(ai_board)
+    model = get_model(model_path)
+    model.learning_rate = LEARNING_RATE
+    model.learning_starts = LEARNING_STARTS
+    model.exploration_initial_eps = EXPLORATION_INITIAL_EPS
+    model.exploration_final_eps = EXPLORATION_FINAL_EPS
+    model.buffer_size = BUFFER_SIZE
+    model.batch_size = BATCH_SIZE
+    model.train_freq = TRAIN_FREQ
 
-        # Player's turn
-        print("Your turn!")
-        row = int(input("Enter row: "))
-        col = int(input("Enter col: "))
-        result = fire(ai_board, row, col)
-        print(result)
+    # Train and save
+    t = time.time()
 
-        # Check if AI's ships are sunk
-        if all_ships_sunk(ai_board):
-            print("You win!")
-            game_over = True
-            break
+    model.learn(
+        total_timesteps=TRAIN_TIME_STEPS,
+        callback=checkpoint_callback,
+        reset_num_timesteps=False,
+    )
+    model.save(MODEL_PATH)
 
-        # AI's turn (for now random)
-        print("AI's turn!")
-        row, col = random.randint(0, BOARD_SIZE - 1), random.randint(0, BOARD_SIZE - 1)
-        result = fire(player_board, row, col)
-        print(f"AI fires at ({row}, {col}) - {result}")
+    print(f"Trained {TRAIN_TIME_STEPS} steps in {time.time()-t} seconds.")
 
-        # Check if player's ships are sunk
-        if all_ships_sunk(player_board):
-            print("AI wins!")
-            game_over = True
 
-# Start the game
-play_game()
+def print_probs(model, obs):
+
+    # Print action probabilities
+    probs = model.action_probability(obs)
+    topa = sorted(
+        [(prob, kv[1]) for kv, prob in zip(ACTIONS.items(), probs)],
+        reverse=True,
+    )[:3]
+    print(
+        'Top 3 actions - {}: {:3.0f}%, {}: {:3.0f}%, {}: {:3.0f}%'.format(
+            topa[0][1],
+            topa[0][0] * 100,
+            topa[1][1],
+            topa[1][0] * 100,
+            topa[2][1],
+            topa[2][0] * 100,
+        )
+    )
+
+
+def run_test():
+
+    # Initialize env and model
+    env = QWOPEnv()
+    model = DQN.load(MODEL_PATH)
+
+    input('Press Enter to start.')
+
+    time.sleep(1)
+
+    for _ in range(100):
+
+        # Run test
+        t = time.time()
+        done = False
+        obs = env.reset()
+        while not done:
+
+            action, _states = model.predict(obs)
+            # print_probs(model, obs)
+            obs, rewards, done, info = env.step(action)
+
+        print(
+            "Test run complete: {:4.1f} in {:4.1f} seconds. Velocity {:2.2f}".format(
+                env.previous_score,
+                time.time() - t,
+                env.previous_score / (time.time() - t),
+            )
+        )
+
+        time.sleep(1)
+
+        # Admire the finish
+        if env.previous_score >= 100:
+            time.sleep(2)
+
+    input('Press Enter to exit.')
+
+
+@click.command()
+@click.option(
+    '--train',
+    default=False,
+    is_flag=True,
+    help='Run training; will train from existing model if path exists',
+)
+@click.option('--test', default=False, is_flag=True, help='Run test')
+@click.option(
+    '--record',
+    default=False,
+    is_flag=True,
+    help='Record observations for pretraining',
+)
+@click.option(
+    '--imitate',
+    default=False,
+    is_flag=True,
+    help='Train agent from recordings; will use existing model if path exists',
+)
+def main(train, test, record, imitate):
+    """Train and test an agent for QWOP."""
+
+    if train:
+        run_train()
+    if test:
+        run_test()
+
+    if record:
+        env = QWOPEnv()
+        recorder.generate_obs(env, RECORD_PATH, N_EPISODES)
+
+    if imitate:
+        model = get_model(MODEL_PATH)
+        imitation_learning.imitate(
+            model, RECORD_PATH, MODEL_PATH, PRETRAIN_LEARNING_RATE, N_EPOCHS
+        )
+
+    if not (test or train or record or imitate):
+        with click.Context(main) as ctx:
+            click.echo(main.get_help(ctx))
+
+
+if __name__ == '__main__':
+    main()
