@@ -2,9 +2,12 @@ import os
 import time
 
 import click
+#changing from "from stable_baselines import DQN" to "from stable_baselines3 import DQN"
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CheckpointCallback
-from stable_baselines.deepq.policies import FeedForwardPolicy
+from stable_baselines.ddpg import FeedForwardPolicy
+#from stable_baselines3.deepq.policies import FeedForwardPolicy
+
 
 from game.env import ACTIONS
 from game.env import QWOPEnv

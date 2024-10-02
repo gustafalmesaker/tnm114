@@ -1,0 +1,2 @@
+1. All dependencies downloaded listed in requirementst.txt
+2. Installed chromedriver (already installed).
