@@ -54,7 +54,7 @@ spaceship = {
     "velocity_x": 0,
     "velocity_y": 0,
     "thrust": 0.1,
-    "gravity": 0.05,
+    "gravity": 0.02,
     "width": spaceship_width,
     "height": spaceship_height
 }
@@ -100,9 +100,9 @@ while running:
     # Handle key presses for control
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
-        spaceship["angle"] += 3  # Rotate counter-clockwise
+        spaceship["angle"] -= 3  # Rotate counter-clockwise
     if keys[pygame.K_RIGHT]:
-        spaceship["angle"] -= 3  # Rotate clockwise
+        spaceship["angle"] += 3  # Rotate clockwise
     if keys[pygame.K_UP]:
         # Apply thrust based on the direction the spaceship is facing
         spaceship["velocity_x"] += spaceship["thrust"] * math.sin(math.radians(spaceship["angle"]))
