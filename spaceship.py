@@ -21,13 +21,24 @@ SIZEFACTOR = 0.4
 clock = pygame.time.Clock()
 
 # Load spaceship image and rotate it to face upwards
-spaceship_img = pygame.image.load("assets/r_blue.png")
-spaceship_img = pygame.transform.rotate(spaceship_img, 90)  # Rotate 90 degrees counter-clockwise to face up
+#spaceship_img = pygame.image.load("assets/r_blue.png")
+big_image = pygame.image.load("assets/spaceship2.png")
+
+#spaceship_img = pygame.transform.rotate(spaceship_img, 90)  # Rotate 90 degrees counter-clockwise to face up
 
 # Scale the spaceship image to 20% of its original size
-original_width, original_height = spaceship_img.get_size()
-new_width = int(original_width * SIZEFACTOR)
-new_height = int(original_height * SIZEFACTOR)
+original_width, original_height = big_image.get_size()
+
+######
+crop_rect_blue_spaceship = pygame.Rect(0, 0, original_width // 5, original_height)
+crop_rect_rock = pygame.Rect(0, 0, 7*original_width // 10, original_height)
+# Crop the image using subsurface
+spaceship_img = big_image.subsurface(crop_rect_blue_spaceship)
+rock_img = big_image.subsurface(crop_rect_rock)
+#####
+spaceship_width, spaceship_height = spaceship_img.get_size()
+new_width = int(spaceship_width * SIZEFACTOR)
+new_height = int(spaceship_height * SIZEFACTOR)
 spaceship_img = pygame.transform.scale(spaceship_img, (new_width, new_height))
 
 # Update spaceship dimensions after scaling
@@ -87,9 +98,9 @@ while running:
     # Handle key presses for control
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
-        spaceship["angle"] += 2  # Rotate counter-clockwise
+        spaceship["angle"] += 3  # Rotate counter-clockwise
     if keys[pygame.K_RIGHT]:
-        spaceship["angle"] -= 2  # Rotate clockwise
+        spaceship["angle"] -= 3  # Rotate clockwise
     if keys[pygame.K_UP]:
         # Apply thrust based on the direction the spaceship is facing
         spaceship["velocity_x"] += spaceship["thrust"] * math.sin(math.radians(spaceship["angle"]))
@@ -116,9 +127,13 @@ while running:
         spaceship["y"] = HEIGHT // 4
         spaceship["velocity_x"] = 0
         spaceship["velocity_y"] = 0
+        spaceship["angle"] = 0
 
     # Draw spaceship with the provided image
     draw_spaceship(spaceship["x"], spaceship["y"], spaceship["angle"], spaceship_img)
+
+    # draw rock
+    #draw_spaceship(100, 100, 0, rock_img)
 
     # Draw landing zone
     pygame.draw.rect(screen, GREEN, (landing_zone["x"], landing_zone["y"], landing_zone["width"], landing_zone["height"]))
