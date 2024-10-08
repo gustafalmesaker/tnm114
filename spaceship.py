@@ -1,3 +1,4 @@
+import random
 import pygame
 import math
 
@@ -23,6 +24,7 @@ clock = pygame.time.Clock()
 # Load spaceship image and rotate it to face upwards
 #spaceship_img = pygame.image.load("assets/r_blue.png")
 big_image = pygame.image.load("assets/spaceship2.png")
+gas_image = pygame.image.load("assets/gas.png")
 
 #spaceship_img = pygame.transform.rotate(spaceship_img, 90)  # Rotate 90 degrees counter-clockwise to face up
 
@@ -61,7 +63,7 @@ spaceship = {
 landing_zone = {
     "x": WIDTH // 3,
     "y": HEIGHT - 50,
-    "width": 100,
+    "width": 50,
     "height": 10,
 }
 
@@ -123,11 +125,13 @@ while running:
         print("Landed successfully!")
         score += 1
         # Reset spaceship position
-        spaceship["x"] = WIDTH // 2
-        spaceship["y"] = HEIGHT // 4
-        spaceship["velocity_x"] = 0
-        spaceship["velocity_y"] = 0
-        spaceship["angle"] = 0
+        #spaceship["x"] = WIDTH // 2
+        #spaceship["y"] = HEIGHT // 4
+        #spaceship["velocity_x"] = 0
+        #spaceship["velocity_y"] = 0
+        #spaceship["angle"] = 0
+        landing_zone["x"] = random.randint(landing_zone["width"] // 2, WIDTH - landing_zone["width"] // 2)
+        landing_zone["y"] = random.randint(HEIGHT // 2, HEIGHT - landing_zone["height"] - 20)
 
     # Draw spaceship with the provided image
     draw_spaceship(spaceship["x"], spaceship["y"], spaceship["angle"], spaceship_img)
@@ -136,15 +140,16 @@ while running:
     #draw_spaceship(100, 100, 0, rock_img)
 
     # Draw landing zone
-    pygame.draw.rect(screen, GREEN, (landing_zone["x"], landing_zone["y"], landing_zone["width"], landing_zone["height"]))
+    #pygame.draw.rect(screen, GREEN, (landing_zone["x"], landing_zone["y"], landing_zone["width"], landing_zone["height"]))
 
     # Display score
     font = pygame.font.SysFont(None, 36)
     score_text = font.render(f"Score: {score}", True, WHITE)
     screen.blit(score_text, (10, 10))
+    screen.blit(gas_image, (landing_zone["x"], landing_zone["y"]))
 
     # Refresh screen
     pygame.display.flip()
     clock.tick(60)
-
+print("You scored ", score , " points!")
 pygame.quit()
