@@ -56,7 +56,9 @@ spaceship = {
     "thrust": 0.1,
     "gravity": 0.02,
     "width": spaceship_width,
-    "height": spaceship_height
+    "height": spaceship_height,
+    "fuel": 100
+
 }
 
 # Landing zone properties
@@ -105,8 +107,10 @@ while running:
         spaceship["angle"] += 3  # Rotate clockwise
     if keys[pygame.K_UP]:
         # Apply thrust based on the direction the spaceship is facing
-        spaceship["velocity_x"] += spaceship["thrust"] * math.sin(math.radians(spaceship["angle"]))
-        spaceship["velocity_y"] -= spaceship["thrust"] * math.cos(math.radians(spaceship["angle"]))
+        if spaceship["fuel"] > 0:
+            spaceship["velocity_x"] += spaceship["thrust"] * math.sin(math.radians(spaceship["angle"]))
+            spaceship["velocity_y"] -= spaceship["thrust"] * math.cos(math.radians(spaceship["angle"]))
+            spaceship["fuel"] -= 0.1
 
     # Apply gravity
     spaceship["velocity_y"] += spaceship["gravity"]
@@ -124,6 +128,9 @@ while running:
     if check_collision(spaceship, landing_zone):
         print("Landed successfully!")
         score += 1
+        spaceship["fuel"] += 20
+        if spaceship["fuel"] > 100:
+            spaceship["fuel"] = 100
         # Reset spaceship position
         #spaceship["x"] = WIDTH // 2
         #spaceship["y"] = HEIGHT // 4
@@ -136,16 +143,15 @@ while running:
     # Draw spaceship with the provided image
     draw_spaceship(spaceship["x"], spaceship["y"], spaceship["angle"], spaceship_img)
 
-    # draw rock
-    #draw_spaceship(100, 100, 0, rock_img)
-
     # Draw landing zone
     #pygame.draw.rect(screen, GREEN, (landing_zone["x"], landing_zone["y"], landing_zone["width"], landing_zone["height"]))
 
     # Display score
     font = pygame.font.SysFont(None, 36)
     score_text = font.render(f"Score: {score}", True, WHITE)
+    fuel_text = font.render(f"Fuel: {spaceship['fuel']:.1f}%", True, WHITE)
     screen.blit(score_text, (10, 10))
+    screen.blit(fuel_text, (WIDTH-200, 10))
     screen.blit(gas_image, (landing_zone["x"], landing_zone["y"]))
 
     # Refresh screen
