@@ -1,6 +1,6 @@
+import random
 import pygame
 import math
-import random  # Import the random module
 
 # Initialize Pygame
 pygame.init()
@@ -8,12 +8,11 @@ pygame.init()
 # Screen dimensions
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Lunar Lander")
+pygame.display.set_caption("SpaceDrift")
 
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-GREEN = (0, 255, 0)
 
 # Globals
 SIZEFACTOR = 0.4
@@ -21,26 +20,21 @@ SIZEFACTOR = 0.4
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
 
-# Load spaceship image and rotate it to face upwards
-big_image = pygame.image.load("assets/spaceship2.png")
+# Load images
+spaceship_img = pygame.image.load("assets/spaceship3.png")
+rock_img = pygame.image.load("assets/rock2.png")
+fuel_img = pygame.image.load("assets/fuel2.png")
 
-# Crop the image using subsurface
-original_width, original_height = big_image.get_size()
-crop_rect_blue_spaceship = pygame.Rect(0, 0, original_width // 5, original_height)
-crop_rect_rock = pygame.Rect(0, 0, 7*original_width // 10, original_height)
-spaceship_img = big_image.subsurface(crop_rect_blue_spaceship)
-rock_img = big_image.subsurface(crop_rect_rock)
+# Scale images
+spaceship_img = pygame.transform.scale(spaceship_img, (int(spaceship_img.get_width() * SIZEFACTOR), int(spaceship_img.get_height() * SIZEFACTOR)))
+rock_img = pygame.transform.scale(rock_img, (int(rock_img.get_width() * SIZEFACTOR), int(rock_img.get_height() * SIZEFACTOR)))
 
-# Scale the spaceship image to 20% of its original size
-spaceship_width, spaceship_height = spaceship_img.get_size()
-new_width = int(spaceship_width * SIZEFACTOR)
-new_height = int(spaceship_height * SIZEFACTOR)
-spaceship_img = pygame.transform.scale(spaceship_img, (new_width, new_height))
-
-# Update spaceship dimensions after scaling
-spaceship_width, spaceship_height = spaceship_img.get_size()
+# Adjust fuel image size manually to match the scale of the game
+FUEL_SCALE = 0.05  # Adjust this scaling factor as needed
+fuel_img = pygame.transform.scale(fuel_img, (int(fuel_img.get_width() * FUEL_SCALE), int(fuel_img.get_height() * FUEL_SCALE)))
 
 # Spaceship properties
+spaceship_width, spaceship_height = spaceship_img.get_size()
 spaceship = {
     "x": WIDTH // 2,
     "y": HEIGHT // 4,
@@ -48,18 +42,22 @@ spaceship = {
     "velocity_x": 0,
     "velocity_y": 0,
     "thrust": 0.1,
-    "gravity": 0.05,
+    "gravity": 0.02,
     "width": spaceship_width,
     "height": spaceship_height
 }
 
-# Landing zone properties
-landing_zone = {
-    "x": WIDTH // 3,
-    "y": HEIGHT - 50,
-    "length": 100,
-    "height": 10,
-    "angle": 0,  # Angle of the landing zone
+# Rock properties
+rock = {
+    "x": random.randint(0, WIDTH - rock_img.get_width()),
+    "y": random.randint(0, HEIGHT - rock_img.get_height()),
+}
+
+# Fuel properties
+fuel = {
+    "x": random.randint(0, WIDTH - fuel_img.get_width()),
+    "y": random.randint(0, HEIGHT - fuel_img.get_height()),
+    "collected": False
 }
 
 # Game variables
@@ -72,30 +70,9 @@ def draw_spaceship(x, y, angle, image):
     rect = rotated_image.get_rect(center=(x, y))  # Center the rotated image
     screen.blit(rotated_image, rect.topleft)
 
-def draw_rotated_line(x, y, length, angle):
-    """Draws a line with a given center (x, y), length, and angle."""
-    half_length = length // 2
-    
-    # Calculate the endpoints of the line
-    x1 = x + half_length * math.cos(math.radians(angle))
-    y1 = y + half_length * math.sin(math.radians(angle))
-    x2 = x - half_length * math.cos(math.radians(angle))
-    y2 = y - half_length * math.sin(math.radians(angle))
-    
-    # Draw the line
-    pygame.draw.line(screen, GREEN, (x1, y1), (x2, y2), 5)
-
-def check_collision(spaceship, zone):
-    """Check if the spaceship has collided with the landing zone."""
-    ship_rect = pygame.Rect(spaceship["x"] - spaceship["width"] // 2,
-                            spaceship["y"] - spaceship["height"] // 2,
-                            spaceship["width"],
-                            spaceship["height"])
-
-    # For simplicity, we will use an unrotated rectangle for collision detection
-    zone_rect = pygame.Rect(zone["x"] - zone["length"] // 2, zone["y"] - zone["height"] // 2, zone["length"], zone["height"])
-
-    return ship_rect.colliderect(zone_rect)
+def check_collision(rect1, rect2):
+    """Check if two rectangles collide."""
+    return rect1.colliderect(rect2)
 
 # Game loop
 while running:
@@ -109,9 +86,9 @@ while running:
     # Handle key presses for control
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
-        spaceship["angle"] += 3  # Rotate counter-clockwise
+        spaceship["angle"] -= 3  # Rotate counter-clockwise
     if keys[pygame.K_RIGHT]:
-        spaceship["angle"] -= 3  # Rotate clockwise
+        spaceship["angle"] += 3  # Rotate clockwise
     if keys[pygame.K_UP]:
         # Apply thrust based on the direction the spaceship is facing
         spaceship["velocity_x"] += spaceship["thrust"] * math.sin(math.radians(spaceship["angle"]))
@@ -129,28 +106,45 @@ while running:
         print("Spaceship out of bounds! Game Over!")
         running = False
 
-    # Check if spaceship lands in the zone
-    if check_collision(spaceship, landing_zone):
-        print("Landed successfully!")
-        score += 1
-        # Reset spaceship position
-        #spaceship["x"] = WIDTH // 2
-        #spaceship["y"] = HEIGHT // 4
-        #spaceship["velocity_x"] = 0
-        #spaceship["velocity_y"] = 0
-        #spaceship["angle"] = 0
-        
-        # Randomize the landing zone's x, y, and angle positions
-        landing_zone["x"] = random.randint(landing_zone["length"] // 2, WIDTH - landing_zone["length"] // 2)
-        landing_zone["y"] = random.randint(HEIGHT // 2, HEIGHT - landing_zone["height"] - 20)
-        landing_zone["angle"] = random.randint(-60, 60)  # Random angle between -30 and 30 degrees
-        print(f"New landing zone position: x={landing_zone['x']}, y={landing_zone['y']}, angle={landing_zone['angle']}")
+    # Collision with rock - check if the spaceship's center is within the rock's bounds
+    spaceship_rect = pygame.Rect(spaceship["x"] - spaceship["width"] // 2,
+                                  spaceship["y"] - spaceship["height"] // 2,
+                                  spaceship["width"],
+                                  spaceship["height"])
+    rock_rect = pygame.Rect(rock["x"], rock["y"], rock_img.get_width(), rock_img.get_height())
 
-    # Draw spaceship with the provided image
+    # Check if spaceship's center collides with the center of the rock
+    spaceship_center = (spaceship["x"], spaceship["y"])
+    rock_center = (rock["x"] + rock_img.get_width() // 2, rock["y"] + rock_img.get_height() // 2)
+
+    # Calculate the distance between centers
+    distance = math.sqrt((spaceship_center[0] - rock_center[0]) ** 2 + (spaceship_center[1] - rock_center[1]) ** 2)
+    
+    # Check for collision only if the spaceship is close enough
+    if distance < (spaceship_width / 2 + rock_img.get_width() / 2):
+        print("Collision with rock! Game Over!")
+        running = False
+
+    # Collision with fuel
+    fuel_rect = pygame.Rect(fuel["x"], fuel["y"], fuel_img.get_width(), fuel_img.get_height())
+    if not fuel["collected"] and check_collision(spaceship_rect, fuel_rect):
+        print("Fuel collected!")
+        score += 1
+        fuel["collected"] = True  # Mark fuel as collected
+        # Respawn fuel in a new location within boundaries
+        fuel["x"] = random.randint(0, WIDTH - fuel_img.get_width())
+        fuel["y"] = random.randint(0, HEIGHT - fuel_img.get_height())
+        fuel["collected"] = False  # Make it visible again
+
+    # Draw spaceship
     draw_spaceship(spaceship["x"], spaceship["y"], spaceship["angle"], spaceship_img)
 
-    # Draw rotated landing zone (green line)
-    draw_rotated_line(landing_zone["x"], landing_zone["y"], landing_zone["length"], landing_zone["angle"])
+    # Draw rock
+    screen.blit(rock_img, (rock["x"], rock["y"]))
+
+    # Draw fuel
+    if not fuel["collected"]:
+        screen.blit(fuel_img, (fuel["x"], fuel["y"]))
 
     # Display score
     font = pygame.font.SysFont(None, 36)
@@ -161,4 +155,5 @@ while running:
     pygame.display.flip()
     clock.tick(60)
 
+print("You scored", score, "points!")
 pygame.quit()
