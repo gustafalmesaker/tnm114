@@ -23,11 +23,15 @@ clock = pygame.time.Clock()
 # Load images
 spaceship_img = pygame.image.load("assets/spaceship3.png")
 rock_img = pygame.image.load("assets/rock2.png")
-gas_image = pygame.image.load("assets/gas.png")
+fuel_img = pygame.image.load("assets/fuel2.png")
 
 # Scale images
 spaceship_img = pygame.transform.scale(spaceship_img, (int(spaceship_img.get_width() * SIZEFACTOR), int(spaceship_img.get_height() * SIZEFACTOR)))
 rock_img = pygame.transform.scale(rock_img, (int(rock_img.get_width() * SIZEFACTOR), int(rock_img.get_height() * SIZEFACTOR)))
+
+# Adjust fuel image size manually to match the scale of the game
+FUEL_SCALE = 0.05  # Adjust this scaling factor as needed
+fuel_img = pygame.transform.scale(fuel_img, (int(fuel_img.get_width() * FUEL_SCALE), int(fuel_img.get_height() * FUEL_SCALE)))
 
 # Spaceship properties
 spaceship_width, spaceship_height = spaceship_img.get_size()
@@ -51,8 +55,8 @@ rock = {
 
 # Fuel properties
 fuel = {
-    "x": random.randint(0, WIDTH - gas_image.get_width()),
-    "y": random.randint(0, HEIGHT - gas_image.get_height()),
+    "x": random.randint(0, WIDTH - fuel_img.get_width()),
+    "y": random.randint(0, HEIGHT - fuel_img.get_height()),
     "collected": False
 }
 
@@ -122,14 +126,14 @@ while running:
         running = False
 
     # Collision with fuel
-    fuel_rect = pygame.Rect(fuel["x"], fuel["y"], gas_image.get_width(), gas_image.get_height())
+    fuel_rect = pygame.Rect(fuel["x"], fuel["y"], fuel_img.get_width(), fuel_img.get_height())
     if not fuel["collected"] and check_collision(spaceship_rect, fuel_rect):
         print("Fuel collected!")
         score += 1
         fuel["collected"] = True  # Mark fuel as collected
         # Respawn fuel in a new location within boundaries
-        fuel["x"] = random.randint(0, WIDTH - gas_image.get_width())
-        fuel["y"] = random.randint(0, HEIGHT - gas_image.get_height())
+        fuel["x"] = random.randint(0, WIDTH - fuel_img.get_width())
+        fuel["y"] = random.randint(0, HEIGHT - fuel_img.get_height())
         fuel["collected"] = False  # Make it visible again
 
     # Draw spaceship
@@ -140,7 +144,7 @@ while running:
 
     # Draw fuel
     if not fuel["collected"]:
-        screen.blit(gas_image, (fuel["x"], fuel["y"]))
+        screen.blit(fuel_img, (fuel["x"], fuel["y"]))
 
     # Display score
     font = pygame.font.SysFont(None, 36)
