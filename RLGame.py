@@ -21,6 +21,8 @@ GREEN = (0, 255, 0)
 
 # Globals
 SIZEFACTOR = 0.4
+SPEEDFACTOR = 10 #for testing
+ANGLE = 10
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
@@ -35,28 +37,37 @@ spaceship_img = big_image.subsurface(crop_rect_blue_spaceship)
 spaceship_width, spaceship_height = spaceship_img.get_size()
 spaceship_img = pygame.transform.scale(spaceship_img, (int(spaceship_width * SIZEFACTOR), int(spaceship_height * SIZEFACTOR)))
 
+# Text
+font = pygame.font.SysFont(None, 36)
+
 # Spaceship properties
 spaceship = {
-    "x": WIDTH // 2,
-    "y": HEIGHT // 4,
+    "x": 3 * WIDTH // 4,
+    "y": 7 * HEIGHT // 8,
     "angle": 0,  # 0 degrees represents facing upwards
     "velocity_x": 0,
     "velocity_y": 0,
-    "thrust": 0.3,
-    "gravity": 0.005,
+    "thrust": 0.1 * SPEEDFACTOR,
+    "gravity": 0.005 * SPEEDFACTOR,
     "width": spaceship_img.get_width(),
     "height": spaceship_img.get_height(),
     "fuel": 100
 }
 
 # Landing zone properties
+landing_zone_length = 100
+landing_zone_height = 10
+
 landing_zone = {
-    "x": WIDTH // 3,
-    "y": HEIGHT - 50,
-    "length": 100,
-    "height": 10,
+    "length": landing_zone_length,
+    "height": landing_zone_height,
     "angle": 0,  # Angle of the landing zone
+    "x": landing_zone_length + 100,
+    "y": 100
+    #"x": random.randint(landing_zone_length // 2, WIDTH - landing_zone_length // 2),
+    #"y": random.randint(landing_zone_height // 2, HEIGHT - landing_zone_height - 20),
 }
+
 
 # Define state and action size
 state_size = 5  # e.g., [x, y, velocity_x, velocity_y, angle]
@@ -76,14 +87,16 @@ except FileNotFoundError:
 
 # Function to reset the spaceship and landing zone properties
 def reset_game():
-    spaceship["x"] = WIDTH // 2
-    spaceship["y"] = HEIGHT // 4
+    spaceship["x"] = 3 * WIDTH // 4
+    spaceship["y"] = 7 * HEIGHT // 8
     spaceship["angle"] = 0
     spaceship["velocity_x"] = 0
     spaceship["velocity_y"] = 0
     spaceship["fuel"] = 100
-    landing_zone["x"] = random.randint(landing_zone["length"] // 2, WIDTH - landing_zone["length"] // 2)
-    landing_zone["y"] = random.randint(HEIGHT // 2, HEIGHT - landing_zone["height"] - 20)
+    #landing_zone["x"] = random.randint(landing_zone["length"] // 2, WIDTH - landing_zone["length"] // 2)
+    #landing_zone["y"] = random.randint(landing_zone["height"] // 2, HEIGHT - landing_zone["height"] - 20)
+    landing_zone["x"] =landing_zone_length + 100
+    landing_zone["y"] = 100
 
 # Draw spaceship function
 def draw_spaceship(x, y, angle, image):
@@ -116,8 +129,8 @@ def calculate_distance(x1, y1, x2, y2):
 previous_distance = calculate_distance(spaceship["x"], spaceship["y"], landing_zone["x"], landing_zone["y"])
 
 
-episode = 0
-num_episodes = 10
+episode = 1
+num_episodes = 100
 succesful_landings = 0
 out_of_fuel = 0
 
@@ -134,30 +147,35 @@ while episode < num_episodes:
     action = agent.choose_action(state)
 
 
-    fuel_consumtion = 1
+    fuel_consumtion = 0.5
     # Map actions to spaceship controls
-    if action == 0:  # Rotate left
-        spaceship["angle"] -= 3
-    elif action == 1:  # Rotate right
-        spaceship["angle"] += 3
-    elif action == 2:  # Thrust
+    if action == 0:
+        nothing = True
+    elif action == 1:  # Rotate left
+        spaceship["angle"] -= ANGLE
+    elif action == 2:  # Rotate right
+        spaceship["angle"] += ANGLE
+    elif action == 3:  # Thrust
         if spaceship["fuel"] > 0:
             spaceship["velocity_x"] += spaceship["thrust"] * math.sin(math.radians(spaceship["angle"]))
             spaceship["velocity_y"] -= spaceship["thrust"] * math.cos(math.radians(spaceship["angle"]))
             spaceship["fuel"] -= fuel_consumtion
-    elif action == 3:  # Thrust and rotate left
-        spaceship["angle"] -= 3
+    elif action == 4:  # Thrust and rotate left
+        spaceship["angle"] -= ANGLE
         if spaceship["fuel"] > 0:
             spaceship["velocity_x"] += spaceship["thrust"] * math.sin(math.radians(spaceship["angle"]))
             spaceship["velocity_y"] -= spaceship["thrust"] * math.cos(math.radians(spaceship["angle"]))
             spaceship["fuel"] -= fuel_consumtion
-    elif action == 4:  # Thrust and rotate right
-        spaceship["angle"] += 3
+    elif action == 5:  # Thrust and rotate right
+        spaceship["angle"] += ANGLE
         if spaceship["fuel"] > 0:
             spaceship["velocity_x"] += spaceship["thrust"] * math.sin(math.radians(spaceship["angle"]))
             spaceship["velocity_y"] -= spaceship["thrust"] * math.cos(math.radians(spaceship["angle"]))
             spaceship["fuel"] -= fuel_consumtion
-    #elif action == 5: #do nothing
+    
+    #Display action
+    action_text = font.render(f"Action: {action:.0f}", True, WHITE)
+    screen.blit(action_text, (10, 10))
         
 
     # Apply gravity
@@ -166,6 +184,9 @@ while episode < num_episodes:
     # Update spaceship position
     spaceship["x"] += spaceship["velocity_x"]
     spaceship["y"] += spaceship["velocity_y"]
+
+    #Reward for the RL agent
+    reward = 0
 
     # Check boundaries
     if spaceship["x"] < 0 or spaceship["x"] > WIDTH or spaceship["y"] < 0 or spaceship["y"] > HEIGHT:
@@ -180,11 +201,10 @@ while episode < num_episodes:
         print("Spaceship ran out of fuel! Episode ", episode ," is over!")
         episode += 1
         out_of_fuel += 1
-        reset_game()
         continue
     # Check collision with landing zone
     if check_collision(spaceship, landing_zone):
-        reward = 100  # Successful landing
+        reward = 1000  # Successful landing
         succesful_landings += 1
         print(f"Successfully landed in episode {episode}!")
         episode += 1
@@ -195,19 +215,13 @@ while episode < num_episodes:
     current_distance = calculate_distance(spaceship["x"], spaceship["y"], landing_zone["x"], landing_zone["y"])
 
     # Reward if spaceship is moving closer to the landing zone
-    if current_distance < previous_distance:
-        reward = 2  # Positive reward for moving closer
-    else:
-        reward = -1  # Negative reward for moving further away
+    #if current_distance < previous_distance:
+        #reward = 10  # Positive reward for moving closer
+    #else:
+        #reward = -1  # Negative reward for moving further away
 
-    if current_distance < 100:
-        reward += 10
-    if current_distance < 50:
-        reward += 25
-    if current_distance < 25:
-        reward += 75
+    reward += current_distance - previous_distance
 
-    # Update previous distance to current distance
     previous_distance = current_distance
     
 
@@ -227,7 +241,7 @@ while episode < num_episodes:
     draw_spaceship(spaceship["x"], spaceship["y"], spaceship["angle"], spaceship_img)
     draw_landing_zone()
 
-    font = pygame.font.SysFont(None, 36)
+    
     fuel_text = font.render(f"Fuel: {spaceship['fuel']:.1f}%", True, WHITE)
     screen.blit(fuel_text, (WIDTH-200, 10))
 
