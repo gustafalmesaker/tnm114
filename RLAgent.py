@@ -2,7 +2,7 @@ import random
 import numpy as np
 
 class QLearningAgent:
-    def __init__(self, state_size, action_size, alpha=0.1, gamma=0.9, epsilon=1.0, epsilon_min=0.12, epsilon_decay=0.999):
+    def __init__(self, state_size, action_size, alpha=0.08, gamma=0.95, epsilon=1.0, epsilon_min=0.12, epsilon_decay=0.999):
         self.state_size = state_size
         self.action_size = action_size
         self.alpha = alpha  # Learning rate
