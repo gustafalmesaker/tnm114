@@ -131,7 +131,7 @@ def calculate_distance(x1, y1, x2, y2):
 previous_distance = calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"])
 
 episode = 1
-num_episodes = 200
+num_episodes = 5000
 succesful_landings = 0
 out_of_fuel = 0
 
