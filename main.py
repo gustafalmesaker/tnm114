@@ -6,6 +6,10 @@ import pickle  # To save and load agent data
 # Import your QLearningAgent class
 from RLAgent import QLearningAgent
 
+#load file
+loadAgentFile = "normalized_agent.pkl"
+saveAgentTo = "normalized_agent.pkl"
+
 # Initialize Pygame
 pygame.init()
 
@@ -21,8 +25,11 @@ GREEN = (0, 255, 0)
 
 # Globals
 SIZEFACTOR = 0.4
-SPEEDFACTOR = 10 #for testing
-ANGLE = 10
+SPEEDFACTOR = 5 #for testing
+ANGLE = 5
+FUEL_AREA_WIDTH = (100, WIDTH-100)
+FUEL_AREA_HEIGHT = (100, HEIGHT-100)
+NUM_OF_EPISODES = 1000
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
@@ -54,14 +61,14 @@ spaceship = {
     "gravity": 0.005 * SPEEDFACTOR,
     "width": spaceship_img.get_width(),
     "height": spaceship_img.get_height(),
-    "fuel": 100
+    "fuel": 100,
+    "episode": 1
 }
 
 # Fuel properties
 fuel = {
     "x": WIDTH // 2, 
-    "y": HEIGHT // 2,
-    "collected": False
+    "y": HEIGHT // 2
 }
 
 # Define state and action size
@@ -73,7 +80,7 @@ agent = QLearningAgent(state_size, action_size)
 
 # Load agent data if available
 try:
-    with open("agent_data.pkl", "rb") as f:
+    with open(loadAgentFile, "rb") as f:
         agent_data = pickle.load(f)
         agent.q_table = agent_data["q_table"]
         print("Agent data loaded successfully!")
@@ -90,14 +97,16 @@ def reset_game():
     spaceship["fuel"] = 100
     fuel["x"] = WIDTH // 2
     fuel["y"] = HEIGHT // 2
+    spaceship["episode"] += 1
     
 
 def reset_after_win():
     spaceship["fuel"] += 25
     if spaceship["fuel"] > 100:
         spaceship["fuel"] = 100
-    fuel["x"] = random.randint(0, WIDTH)
-    fuel["y"] = random.randint(0, HEIGHT)
+    fuel["x"] = random.randint(0+100, WIDTH-100)
+    fuel["y"] = random.randint(0+100, HEIGHT-100)
+    spaceship["episode"]
     
 
 # Draw spaceship function
@@ -130,13 +139,13 @@ def calculate_distance(x1, y1, x2, y2):
 # Initialize previous distance to a large value at the start of the game
 previous_distance = calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"])
 
-episode = 1
-num_episodes = 5000
+
+
 succesful_landings = 0
 out_of_fuel = 0
 
 # Modify the game loop to include the new reward function
-while episode < num_episodes:
+while spaceship["episode"] < NUM_OF_EPISODES:
     screen.fill(BLACK)
     state = [
         spaceship["x"] / WIDTH,
@@ -144,10 +153,11 @@ while episode < num_episodes:
         spaceship["velocity_x"],
         spaceship["velocity_y"],
         spaceship["angle"] / 360,
-        fuel["x"],
-        fuel["y"],
-        calculate_distance(spaceship["x"],spaceship["y"],fuel["x"],fuel["y"])
+        (fuel["x"] - spaceship["x"]) / WIDTH,  # relative x-position of the fuel
+        (fuel["y"] - spaceship["y"]) / HEIGHT,  # relative y-position of the fuel
+        calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"]) / WIDTH  # normalized distance
     ]
+
     action = agent.choose_action(state)
 
 
@@ -194,24 +204,21 @@ while episode < num_episodes:
 
     # Check boundaries
     if spaceship["x"] < 0 or spaceship["x"] > WIDTH or spaceship["y"] < 0 or spaceship["y"] > HEIGHT:
-        reward -=1000  # Out of bounds penalty
-        print("Spaceship out of bounds! Episode ", episode ," is over!")
-        episode += 1
+        reward -=1  # Out of bounds penalty
+        print("Spaceship out of bounds! Episode ",spaceship["episode"]," is over!")
         reset_game()
         continue
 
     if spaceship["fuel"] < 0:
-        reward -= 100
-        print("Spaceship ran out of fuel! Episode ", episode ," is over!")
-        episode += 1
+        reward -= 0.5
+        print("Spaceship ran out of fuel! Episode ",spaceship["episode"]," is over!")
         out_of_fuel += 1
         continue
     # Check collision with landing zone
     if check_collision(spaceship, fuel):
-        reward += 1000  # Successful landing
+        reward += 10  # Successful landing
         succesful_landings += 1
-        print(f"Successfully landed in episode {episode}!")
-        episode += 1
+        print(f"Successfully landed in episode",spaceship["episode"],"!")
         reset_after_win()
         continue
 
@@ -220,9 +227,9 @@ while episode < num_episodes:
 
     # Reward if spaceship is moving closer to the landing zone
     if current_distance < previous_distance:
-        reward += 10  # Positive reward for moving closer
+        reward += 0.01  # Positive reward for moving closer
     else:
-     reward -= 1  # Negative reward for moving further away
+        reward -= 0.01  # Negative reward for moving further away
 
     # Get next state
     next_state = [
@@ -231,36 +238,33 @@ while episode < num_episodes:
         spaceship["velocity_x"],
         spaceship["velocity_y"],
         spaceship["angle"] / 360,
-        fuel["x"],
-        fuel["y"],
-        calculate_distance(spaceship["x"],spaceship["y"],fuel["x"],fuel["y"])
+        (fuel["x"] - spaceship["x"]) / WIDTH,  # relative x-position of the fuel
+        (fuel["y"] - spaceship["y"]) / HEIGHT,  # relative y-position of the fuel
+        calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"]) / WIDTH  # normalized distance
     ]
+
 
     # Agent learning
     agent.learn(state, action, reward, next_state)
 
     # Draw spaceship and landing zone
     draw_spaceship(spaceship["x"], spaceship["y"], spaceship["angle"], spaceship_img)
-    #draw_landing_zone()
     draw_fuel()
-
-    # Draw rock
-    #screen.blit(rock_img, (rock["x"], rock["y"]))
+    
 
     # Draw fuel
-    if not fuel["collected"]:
-        screen.blit(fuel_img, (fuel["x"], fuel["y"]))
+    screen.blit(fuel_img, (fuel["x"], fuel["y"]))
     
     fuel_text = font.render(f"Fuel: {spaceship['fuel']:.1f}%", True, WHITE)
     screen.blit(fuel_text, (WIDTH-200, 10))
 
     pygame.display.flip()
     clock.tick(60)
-print("Succesful landings: ", succesful_landings, "out of ", num_episodes)
-print("Ran out of fuel ", out_of_fuel, " times!")
+print("Succesful landings: ",succesful_landings," out of ",NUM_OF_EPISODES)
+print("Ran out of fuel ",out_of_fuel," times!")
 
 
 #save model
-with open("agent_data.pkl", "wb") as f:
+with open(saveAgentTo, "wb") as f:
     pickle.dump({"q_table": agent.q_table}, f)
-print(f"Agent data saved at episode {episode}.")
+print(f"Agent data saved.")
