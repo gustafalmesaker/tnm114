@@ -7,8 +7,8 @@ import pickle  # To save and load agent data
 from RLAgent import QLearningAgent
 
 #load file
-loadAgentFile = "normalized_agent.pkl"
-saveAgentTo = "normalized_agent.pkl"
+loadAgentFile = "5000_normalized_agent.pkl"
+saveAgentTo = "5000_normalized_agent.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -25,8 +25,8 @@ GREEN = (0, 255, 0)
 
 # Globals
 SIZEFACTOR = 0.4
-SPEEDFACTOR = 5 #for testing
-ANGLE = 5
+SPEEDFACTOR = 10 #for testing
+ANGLE = 10
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
 NUM_OF_EPISODES = 1000
@@ -254,7 +254,6 @@ while spaceship["episode"] < NUM_OF_EPISODES:
 
     # Draw fuel
     screen.blit(fuel_img, (fuel["x"], fuel["y"]))
-    
     fuel_text = font.render(f"Fuel: {spaceship['fuel']:.1f}%", True, WHITE)
     screen.blit(fuel_text, (WIDTH-200, 10))
 
