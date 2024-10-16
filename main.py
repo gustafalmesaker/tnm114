@@ -7,8 +7,8 @@ import pickle  # To save and load agent data
 from RLAgent import QLearningAgent
 
 #load file
-loadAgentFile = "no_gravity.pkl"
-saveAgentTo = "no_gravity_random_fuel.pkl"
+loadAgentFile = "new_shit_1000.pkl"
+saveAgentTo = "new_shit_test.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -29,7 +29,7 @@ SPEEDFACTOR = 10 #for testing
 ANGLE = 10
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
-NUM_OF_EPISODES = 100
+NUM_OF_EPISODES = 10
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
@@ -68,14 +68,14 @@ spaceship = {
 
 # Fuel properties
 fuel = {
-    #"x": WIDTH // 2, 
-    #"y": HEIGHT // 2
-    "x": random.randint(100, WIDTH-100),
-    "y": random.randint(100, HEIGHT-100)
+    "x": WIDTH // 2, 
+    "y": HEIGHT // 2
+    #"x": random.randint(100, WIDTH-100),
+    #"y": random.randint(100, HEIGHT-100)
 }
 
 # Define state and action size
-state_size = 8  
+state_size = 2
 action_size = 6
 
 # Create a Q-learning agent
@@ -98,10 +98,10 @@ def reset_game():
     spaceship["velocity_x"] = 0
     spaceship["velocity_y"] = 0
     spaceship["fuel"] = 100
-    #fuel["x"] = WIDTH // 2
-    #fuel["y"] = HEIGHT // 2
-    fuel["x"] = random.randint(100, WIDTH-100)
-    fuel["y"] = random.randint(100, HEIGHT-100)
+    fuel["x"] = WIDTH // 2
+    fuel["y"] = HEIGHT // 2
+    #fuel["x"] = random.randint(100, WIDTH-100)
+    #fuel["y"] = random.randint(100, HEIGHT-100)
     spaceship["episode"] += 1
     
 
@@ -150,15 +150,14 @@ out_of_fuel = 0
 while spaceship["episode"] < NUM_OF_EPISODES:
     screen.fill(BLACK)
     state = [
-        spaceship["x"] / WIDTH,
-        spaceship["y"] / HEIGHT,
-        spaceship["velocity_x"],
-        spaceship["velocity_y"],
-        spaceship["angle"] / 360,
-        (fuel["x"] - spaceship["x"]) / WIDTH,  # relative x-position of the fuel
-        (fuel["y"] - spaceship["y"]) / HEIGHT,  # relative y-position of the fuel
-        calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"]) / WIDTH  # normalized distance
-    ]
+    (fuel["x"] - spaceship["x"]) / WIDTH,  # Relative x-position of the fuel
+    (fuel["y"] - spaceship["y"]) / HEIGHT,  # Relative y-position of the fuel
+    spaceship["angle"] / 360,               # Normalized spaceship angle
+    math.sqrt(spaceship["velocity_x"] ** 2 + spaceship["velocity_y"] ** 2) / SPEEDFACTOR,  # Normalized velocity magnitude
+    spaceship["fuel"] / 100,                # Normalized fuel level
+    calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"]) / WIDTH  # Normalized distance to fuel
+]
+
 
     action = agent.choose_action(state)
 
@@ -206,7 +205,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
 
     # Check boundaries
     if spaceship["x"] < 0 or spaceship["x"] > WIDTH or spaceship["y"] < 0 or spaceship["y"] > HEIGHT:
-        reward -=1  # Out of bounds penalty
+        reward -= 100  # Out of bounds penalty
         print("Episode",spaceship["episode"],"is over!")
         reset_game()
         continue
@@ -218,7 +217,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
         continue
     # Check collision with landing zone
     if check_collision(spaceship, fuel):
-        reward += 10  # Successful landing
+        reward += 100  # Successful landing
         succesful_landings += 1
         print(f"W")
         reset_after_win()
@@ -227,23 +226,25 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     # Calculate new distance to the landing zone
     current_distance = calculate_distance(spaceship["x"], spaceship["y"], fuel["x"] , fuel["y"])
 
+    if abs(spaceship["velocity_x"] + spaceship["velocity_y"]) < 0.01:
+        reward -= 0.1
+
     # Reward if spaceship is moving closer to the landing zone
     if current_distance < previous_distance:
-        reward += 0.01  # Positive reward for moving closer
+        reward += 0.1  # Positive reward for moving closer
     else:
-        reward -= 0.01  # Negative reward for moving further away
+        reward -= 0.1  # Negative reward for moving further away
 
     # Get next state
     next_state = [
-        spaceship["x"] / WIDTH,
-        spaceship["y"] / HEIGHT,
-        spaceship["velocity_x"],
-        spaceship["velocity_y"],
-        spaceship["angle"] / 360,
-        (fuel["x"] - spaceship["x"]) / WIDTH,  # relative x-position of the fuel
-        (fuel["y"] - spaceship["y"]) / HEIGHT,  # relative y-position of the fuel
-        calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"]) / WIDTH  # normalized distance
+        (fuel["x"] - spaceship["x"]) / WIDTH,  # Relative x-position of the fuel
+        (fuel["y"] - spaceship["y"]) / HEIGHT,  # Relative y-position of the fuel
+        spaceship["angle"] / 360,               # Normalized spaceship angle
+        math.sqrt(spaceship["velocity_x"] ** 2 + spaceship["velocity_y"] ** 2) / SPEEDFACTOR,  # Normalized velocity magnitude
+        spaceship["fuel"] / 100,                # Normalized fuel level
+        calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"]) / WIDTH  # Normalized distance to fuel
     ]
+
 
 
     # Agent learning
