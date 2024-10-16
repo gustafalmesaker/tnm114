@@ -7,8 +7,8 @@ import pickle  # To save and load agent data
 from RLAgent import QLearningAgent
 
 #load file
-loadAgentFile = "no_gravity.pkl"
-saveAgentTo = "no_gravity_random_fuel.pkl"
+loadAgentFile = "models/reboot.pkl"
+saveAgentTo = "models/reboot.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -27,9 +27,10 @@ GREEN = (0, 255, 0)
 SIZEFACTOR = 0.4
 SPEEDFACTOR = 10 #for testing
 ANGLE = 10
+GRAVITY = 0.005
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
-NUM_OF_EPISODES = 100
+NUM_OF_EPISODES = 500
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
@@ -53,13 +54,12 @@ font = pygame.font.SysFont(None, 36)
 # Spaceship properties
 spaceship = {
     "x": 3 * WIDTH // 4,
-    "y": 7 * HEIGHT // 8,
+    "y": 6 * HEIGHT // 8,
     "angle": 0,  
     "velocity_x": 0,
     "velocity_y": 0,
     "thrust": 0.1 * SPEEDFACTOR,
-    #"gravity": 0.005 * SPEEDFACTOR,
-    "gravity": 0,
+    "gravity": GRAVITY * SPEEDFACTOR,
     "width": spaceship_img.get_width(),
     "height": spaceship_img.get_height(),
     "fuel": 100,
@@ -68,11 +68,14 @@ spaceship = {
 
 # Fuel properties
 fuel = {
-    #"x": WIDTH // 2, 
-    #"y": HEIGHT // 2
-    "x": random.randint(100, WIDTH-100),
-    "y": random.randint(100, HEIGHT-100)
+    "x": WIDTH // 2, 
+    "y": HEIGHT // 2,
+    #"x": random.randint(100, WIDTH-100),
+    #"y": random.randint(100, HEIGHT-100)
+    "index": 0
 }
+
+fuel_position = [[WIDTH // 2, HEIGHT // 2], [3 * WIDTH // 4, HEIGHT // 4], [3 * WIDTH // 4, 3 * HEIGHT // 4], [WIDTH // 4, HEIGHT // 4], [3 * WIDTH // 4, HEIGHT // 2]]
 
 # Define state and action size
 state_size = 8  
@@ -98,10 +101,9 @@ def reset_game():
     spaceship["velocity_x"] = 0
     spaceship["velocity_y"] = 0
     spaceship["fuel"] = 100
-    #fuel["x"] = WIDTH // 2
-    #fuel["y"] = HEIGHT // 2
-    fuel["x"] = random.randint(100, WIDTH-100)
-    fuel["y"] = random.randint(100, HEIGHT-100)
+    fuel["index"] = 0
+    fuel["x"] , fuel["y"] = fuel_position[fuel["index"]]
+    
     spaceship["episode"] += 1
     
 
@@ -109,8 +111,11 @@ def reset_after_win():
     spaceship["fuel"] += 25
     if spaceship["fuel"] > 100:
         spaceship["fuel"] = 100
-    fuel["x"] = random.randint(100, WIDTH-100)
-    fuel["y"] = random.randint(100, HEIGHT-100)
+    fuel["index"] += 1
+    fuel["index"] = fuel["index"] % len(fuel_position)
+    fuel["x"] , fuel["y"] = fuel_position[fuel["index"]]
+    #fuel["x"] = random.randint(100, WIDTH-100)
+    #fuel["y"] = random.randint(100, HEIGHT-100)
     
     
 
@@ -204,9 +209,12 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     #Reward for the RL agent
     reward = 0
 
+    if abs(spaceship["velocity_x"] + spaceship["velocity_y"]) < 0.01:
+        reward -= 0.01
+
     # Check boundaries
     if spaceship["x"] < 0 or spaceship["x"] > WIDTH or spaceship["y"] < 0 or spaceship["y"] > HEIGHT:
-        reward -=1  # Out of bounds penalty
+        reward -=1000  # Out of bounds penalty
         print("Episode",spaceship["episode"],"is over!")
         reset_game()
         continue
@@ -218,7 +226,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
         continue
     # Check collision with landing zone
     if check_collision(spaceship, fuel):
-        reward += 10  # Successful landing
+        reward += 100  # Successful landing
         succesful_landings += 1
         print(f"W")
         reset_after_win()
@@ -229,9 +237,9 @@ while spaceship["episode"] < NUM_OF_EPISODES:
 
     # Reward if spaceship is moving closer to the landing zone
     if current_distance < previous_distance:
-        reward += 0.01  # Positive reward for moving closer
+        reward += 1  # Positive reward for moving closer
     else:
-        reward -= 0.01  # Negative reward for moving further away
+        reward -= 0.1  # Negative reward for moving further away
 
     # Get next state
     next_state = [
