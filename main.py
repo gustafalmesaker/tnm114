@@ -8,7 +8,7 @@ from RLAgent import QLearningAgent
 
 #load file
 loadAgentFile = "models/reboot.pkl"
-saveAgentTo = "models/reboot.pkl"
+saveAgentTo = "models/reboot_no_gravity.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -27,7 +27,7 @@ GREEN = (0, 255, 0)
 SIZEFACTOR = 0.4
 SPEEDFACTOR = 10 #for testing
 ANGLE = 10
-GRAVITY = 0.005
+GRAVITY = 0.00
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
 NUM_OF_EPISODES = 500
@@ -237,7 +237,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
 
     # Reward if spaceship is moving closer to the landing zone
     if current_distance < previous_distance:
-        reward += 1  # Positive reward for moving closer
+        reward += 0.15  # Positive reward for moving closer
     else:
         reward -= 0.1  # Negative reward for moving further away
 
