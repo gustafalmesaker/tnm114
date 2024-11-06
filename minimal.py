@@ -7,8 +7,8 @@ import pickle  # To save and load agent data
 from RLAgent import QLearningAgent
 
 #load file
-loadAgentFile = "models/reduced_states.pkl"
-saveAgentTo = "models/reduced_states.pkl"
+loadAgentFile = "models/bullseye_test_12500.pkl"
+saveAgentTo = "models/bullseye_15000.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -30,7 +30,7 @@ ANGLE = 10
 GRAVITY = 0.00
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
-NUM_OF_EPISODES = 500
+NUM_OF_EPISODES = 2500
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
@@ -53,8 +53,8 @@ font = pygame.font.SysFont(None, 36)
 
 # Spaceship properties
 spaceship = {
-    "x": 3 * WIDTH // 4,
-    "y": 6 * HEIGHT // 8,
+    "x": WIDTH // 4,
+    "y": 3 * HEIGHT // 4,
     "angle": 0,  
     "velocity_x": 0,
     "velocity_y": 0,
@@ -75,7 +75,7 @@ fuel = {
     "index": 0
 }
 
-fuel_position = [[WIDTH // 2, HEIGHT // 2], [3 * WIDTH // 4, HEIGHT // 4], [3 * WIDTH // 4, 3 * HEIGHT // 4], [WIDTH // 4, HEIGHT // 4], [3 * WIDTH // 4, HEIGHT // 2]]
+fuel_position = [[WIDTH // 2, HEIGHT // 4], [3 * WIDTH // 4, HEIGHT // 4], [3 * WIDTH // 4, 3 * HEIGHT // 4], [WIDTH // 4, HEIGHT // 4], [3 * WIDTH // 4, HEIGHT // 2]]
 
 # Define state and action size
 state_size = 6  
@@ -95,8 +95,8 @@ except FileNotFoundError:
 
 # Function to reset the spaceship and landing zone properties
 def reset_game():
-    spaceship["x"] = 3 * WIDTH // 4
-    spaceship["y"] = 7 * HEIGHT // 8
+    spaceship["x"] = WIDTH // 4
+    spaceship["y"] = 3 * HEIGHT // 4
     spaceship["angle"] = 0
     spaceship["velocity_x"] = 0
     spaceship["velocity_y"] = 0
@@ -197,7 +197,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     reward = 0
 
     if abs(spaceship["velocity_x"] + spaceship["velocity_y"]) < 0.01:
-        reward -= 0.01
+        reward -= 1
 
     # Check boundaries
     if spaceship["x"] < 0 or spaceship["x"] > WIDTH or spaceship["y"] < 0 or spaceship["y"] > HEIGHT:
@@ -213,7 +213,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
         continue
     # Check collision with landing zone
     if check_collision(spaceship, fuel):
-        reward += 100  # Successful landing
+        reward += 1000  # Successful landing
         succesful_landings += 1
         print(f"W")
         reset_after_win()
@@ -224,15 +224,27 @@ while spaceship["episode"] < NUM_OF_EPISODES:
 
     # Reward if spaceship is moving closer to the landing zone
     if current_distance < previous_distance:
-        reward += 0.15  # Positive reward for moving closer
+        reward += 5  # Positive reward for moving closer
     else:
-        reward -= 0.1  # Negative reward for moving further away
+        reward -= 5  # Negative reward for moving further away
+
+    if current_distance < 25: 
+        reward += 90
+    elif current_distance < 50:
+        reward += 60
+    elif current_distance < 100:
+        reward += 30
+    elif current_distance < 150:
+        reward += 20
+    elif current_distance < 200:
+        reward += 10
+
 
     # Get next state
     next_state = [
         spaceship["x"] / WIDTH,
         spaceship["y"] / HEIGHT,
-        math.sqrt(spaceship["velocity_x"]*spaceship["velocity_x"] + spaceship["velocity_y"] * spaceship["velocity_y"]),
+        math.sqrt(spaceship["velocity_x"] * spaceship["velocity_x"] + spaceship["velocity_y"] * spaceship["velocity_y"]),
         spaceship["angle"] / 360,
         (fuel["x"] - spaceship["x"]) / WIDTH,  # relative x-position of the fuel
         (fuel["y"] - spaceship["y"]) / HEIGHT,  # relative y-position of the fuel
@@ -251,6 +263,10 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     screen.blit(fuel_img, (fuel["x"], fuel["y"]))
     fuel_text = font.render(f"Fuel: {spaceship['fuel']:.1f}%", True, WHITE)
     screen.blit(fuel_text, (WIDTH-200, 10))
+
+    #Distance text
+    distance_text = font.render(f"Distance: {current_distance:.1f}", True, WHITE)
+    screen.blit(distance_text, (WIDTH-200, 50))
 
     pygame.display.flip()
     clock.tick(60)
