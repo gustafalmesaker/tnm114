@@ -7,8 +7,8 @@ import pickle  # To save and load agent data
 from RLAgent import QLearningAgent
 
 #load file
-loadAgentFile = "models/reduced_states.pkl"
-saveAgentTo = "models/reduced_states.pkl"
+loadAgentFile = "models/wo_normalization5000.pkl"
+saveAgentTo = "models/wo_normalization5000.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -30,19 +30,21 @@ ANGLE = 10
 GRAVITY = 0.00
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
-NUM_OF_EPISODES = 500
+NUM_OF_EPISODES = 10
+
+
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
 
 # Load images
 spaceship_img = pygame.image.load("assets/spaceship3.png")
-rock_img = pygame.image.load("assets/rock2.png")
+#rock_img = pygame.image.load("assets/rock2.png")
 fuel_img = pygame.image.load("assets/fuel2.png")
 
 # Scale images
 spaceship_img = pygame.transform.scale(spaceship_img, (int(spaceship_img.get_width() * SIZEFACTOR), int(spaceship_img.get_height() * SIZEFACTOR)))
-rock_img = pygame.transform.scale(rock_img, (int(rock_img.get_width() * SIZEFACTOR), int(rock_img.get_height() * SIZEFACTOR)))
+#rock_img = pygame.transform.scale(rock_img, (int(rock_img.get_width() * SIZEFACTOR), int(rock_img.get_height() * SIZEFACTOR)))
 
 # Adjust fuel image size manually to match the scale of the game
 FUEL_SCALE = 0.08  # Adjust this scaling factor as needed
@@ -114,8 +116,7 @@ def reset_after_win():
     fuel["index"] += 1
     fuel["index"] = fuel["index"] % len(fuel_position)
     fuel["x"] , fuel["y"] = fuel_position[fuel["index"]]
-    #fuel["x"] = random.randint(100, WIDTH-100)
-    #fuel["y"] = random.randint(100, HEIGHT-100)
+    
     
     
 
@@ -128,7 +129,9 @@ def draw_spaceship(x, y, angle, image):
 
     
 def draw_fuel():
-    coord_x,coord_y = fuel["x"], fuel["y"]
+    fuel_width = fuel_img.get_width()
+    fuel_height = fuel_img.get_height()
+    coord_x,coord_y = fuel["x"] - (fuel_width // 2), fuel["y"] - (fuel_height // 2)
     screen.blit(fuel_img,[coord_x, coord_y])
 
 def check_collision(spaceship, fuel):
@@ -155,12 +158,12 @@ out_of_fuel = 0
 while spaceship["episode"] < NUM_OF_EPISODES:
     screen.fill(BLACK)
     state = [
-        spaceship["x"] / WIDTH,
-        spaceship["y"] / HEIGHT,
+        spaceship["x"],
+        spaceship["y"],
         math.sqrt(spaceship["velocity_x"]*spaceship["velocity_x"] + spaceship["velocity_y"] * spaceship["velocity_y"]),
         spaceship["angle"] / 360,
-        (fuel["x"] - spaceship["x"]) / WIDTH,  # relative x-position of the fuel
-        (fuel["y"] - spaceship["y"]) / HEIGHT,  # relative y-position of the fuel
+        (fuel["x"] - spaceship["x"]),
+        (fuel["y"] - spaceship["y"])
     ]
 
     action = agent.choose_action(state)
@@ -197,7 +200,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     reward = 0
 
     if abs(spaceship["velocity_x"] + spaceship["velocity_y"]) < 0.01:
-        reward -= 0.01
+        reward -= 0.1
 
     # Check boundaries
     if spaceship["x"] < 0 or spaceship["x"] > WIDTH or spaceship["y"] < 0 or spaceship["y"] > HEIGHT:
@@ -228,14 +231,26 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     else:
         reward -= 0.1  # Negative reward for moving further away
 
+    #step function for reward
+    if current_distance < 10:
+        reward += 90
+    elif current_distance < 25:
+        reward += 50
+    elif current_distance < 50:
+        reward += 30
+    elif current_distance < 100:
+        reward += 20
+    elif current_distance < 200:
+        reward += 10
+
     # Get next state
     next_state = [
-        spaceship["x"] / WIDTH,
-        spaceship["y"] / HEIGHT,
+        spaceship["x"],
+        spaceship["y"],
         math.sqrt(spaceship["velocity_x"]*spaceship["velocity_x"] + spaceship["velocity_y"] * spaceship["velocity_y"]),
         spaceship["angle"] / 360,
-        (fuel["x"] - spaceship["x"]) / WIDTH,  # relative x-position of the fuel
-        (fuel["y"] - spaceship["y"]) / HEIGHT,  # relative y-position of the fuel
+        (fuel["x"] - spaceship["x"]),
+        (fuel["y"] - spaceship["y"])
     ]
 
 
@@ -248,9 +263,15 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     
 
     # Draw fuel
-    screen.blit(fuel_img, (fuel["x"], fuel["y"]))
     fuel_text = font.render(f"Fuel: {spaceship['fuel']:.1f}%", True, WHITE)
     screen.blit(fuel_text, (WIDTH-200, 10))
+    
+    #Distance text
+    distance_text = font.render(f"Distance: {current_distance:.1f}", True, WHITE)
+    screen.blit(distance_text, (WIDTH-200, 50))
+
+    #Draw line between fuel and ship
+    #pygame.draw.line(color=(255,255,0), surface=screen, width=10, start_pos=[fuel["x"], fuel["y"]], end_pos=[spaceship["x"], spaceship["y"]])
 
     pygame.display.flip()
     clock.tick(60)
