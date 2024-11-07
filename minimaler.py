@@ -10,8 +10,8 @@ from DQN import DQNAgent, DQNNetwork
 
 
 #load file
-loadAgentFile = "models/dqn.pkl"
-saveAgentTo = "models/2000_dqn.pkl"
+loadAgentFile = "models/3000_dqn.pkl"
+saveAgentTo = "models/4000_dqn.pkl"
 
 # Initialize Pygame
 pygame.init()
