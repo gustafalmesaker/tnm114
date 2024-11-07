@@ -5,16 +5,19 @@ import pickle  # To save and load agent data
 
 # Import your QLearningAgent class
 from RLAgent import QLearningAgent
+from DQN import DQNAgent, DQNNetwork
+
+
 
 #load file
-loadAgentFile = "models/onlyship_grav.pkl"
-saveAgentTo = "models/onlyship_grav.pkl"
+loadAgentFile = "models/dqn.pkl"
+saveAgentTo = "models/2000_dqn.pkl"
 
 # Initialize Pygame
 pygame.init()
 
 # Screen dimensions
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1000, 800
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Space Drift")
 
@@ -25,13 +28,14 @@ GREEN = (0, 255, 0)
 
 # Globals
 SIZEFACTOR = 0.4
-SPEEDFACTOR = 10 #for testing
+SPEEDFACTOR = 3 #for testing
 ANGLE = 10
 GRAVITY = 0.01
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
 NUM_OF_EPISODES = 1000
-
+EPISODIAL_REWARD = 0
+TOTAL_REWARD = 0
 
 
 # Clock for controlling frame rate
@@ -69,20 +73,27 @@ spaceship = {
 }
 
 # Define state and action size
-state_size = 6  
+state_size = 4  
 action_size = 4
 
 # Create a Q-learning agent
-agent = QLearningAgent(state_size, action_size)
+#agent = QLearningAgent(state_size, action_size)
 
-# Load agent data if available
+# Instantiate the DQN agent
+agent = DQNAgent(state_size, action_size)
+
+# Load agent model if available
 try:
     with open(loadAgentFile, "rb") as f:
-        agent_data = pickle.load(f)
-        agent.q_table = agent_data["q_table"]
-        print("Agent data loaded successfully!")
+        state_dict = pickle.load(f)
+        if "fc1.weight" in state_dict:  # Check for correct model structure
+            agent.q_network.load_state_dict(state_dict)
+            print("Agent model loaded successfully!")
+        else:
+            print("Incompatible model format. Starting fresh.")
 except FileNotFoundError:
-    print("No previous agent data found, starting fresh.")
+    print("No previous model data found, starting fresh.")
+
 
 # Function to reset the spaceship and landing zone properties
 def reset_game():
@@ -93,7 +104,7 @@ def reset_game():
     spaceship["velocity_y"] = 0
     spaceship["fuel"] = 100
     spaceship["episode"] += 1
-
+    
     
 
 # Draw spaceship function
@@ -120,8 +131,9 @@ while spaceship["episode"] < NUM_OF_EPISODES:
         spaceship["x"],
         spaceship["y"],
         math.sqrt(spaceship["velocity_x"]*spaceship["velocity_x"] + spaceship["velocity_y"] * spaceship["velocity_y"]),
-        spaceship["angle"] / 360,
+        spaceship["angle"] / 360
     ]
+
 
     action = agent.choose_action(state)
 
@@ -154,16 +166,14 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     spaceship["y"] += spaceship["velocity_y"]
 
     #Reward for the RL agent
-    reward = 0.1
+    reward = 0
 
-    if abs(spaceship["velocity_x"] + spaceship["velocity_y"]) < 0.01:
-        reward -= 0.1
-    elif abs(spaceship["velocity_x"] + spaceship["velocity_y"]) > 1: 
-        reward += 0.1
     # Check boundaries
     if spaceship["x"] < 0 or spaceship["x"] > WIDTH or spaceship["y"] < 0 or spaceship["y"] > HEIGHT:
-        reward -=1000  # Out of bounds penalty
-        print("Episode",spaceship["episode"],"is over!")
+        reward = reward - 10  # Out of bounds penalty
+        print("Episode",spaceship["episode"],"is over! || Reward: ", EPISODIAL_REWARD)
+        TOTAL_REWARD = EPISODIAL_REWARD + TOTAL_REWARD
+        EPISODIAL_REWARD = 0
         reset_game()
         continue
 
@@ -172,25 +182,22 @@ while spaceship["episode"] < NUM_OF_EPISODES:
         reward -= 0.5
         print("Spaceship ran out of fuel! Episode ",spaceship["episode"]," is over!")
         out_of_fuel += 1
-        continue
+        EPISODIAL_REWARD = 0
 
-    if abs(spaceship["angle"]) < math.pi / 4:
-        reward += 0.1 
+        continue
 
     current_distance = calculate_distance(spaceship["x"], spaceship["y"], WIDTH // 2, HEIGHT // 2)
 
-    if current_distance < 10:
-        reward += 100
-    elif current_distance < 25:
-        reward += 75
-    elif current_distance < 50:
-        reward += 40
+    if current_distance < 50:
+        reward = reward + 100
+    elif current_distance < 80:
+        reward = reward + 75
     elif current_distance < 100:
-        reward += 20
+        reward = reward + 40
     elif current_distance < 200:
-        reward += 10
-
-    
+        reward = reward + 20
+    elif current_distance < 300:
+        reward = reward + 10
 
     # Get next state
     next_state = [
@@ -200,9 +207,13 @@ while spaceship["episode"] < NUM_OF_EPISODES:
         spaceship["angle"] / 360
     ]
 
+    EPISODIAL_REWARD = EPISODIAL_REWARD + reward
+    # Store experience in replay memory
+    agent.store_experience(state, action, reward, next_state, done=False)
 
-    # Agent learning
-    agent.learn(state, action, reward, next_state)
+    # Update the DQN model
+    agent.update_q_network()
+
 
     # Draw fueltext
     fuel_text = font.render(f"Fuel: {spaceship['fuel']:.1f}%", True, WHITE)
@@ -213,6 +224,15 @@ while spaceship["episode"] < NUM_OF_EPISODES:
 
     #Draw line between fuel and ship
     #pygame.draw.line(color=(255,255,0), surface=screen, width=10, start_pos=[fuel["x"], fuel["y"]], end_pos=[spaceship["x"], spaceship["y"]])
+
+    #DRAW CIRCLES FOR REWARD VIZ
+    pygame.draw.circle(color=(0,0,255), radius=300, center=(WIDTH // 2 , HEIGHT // 2), surface=screen)
+    pygame.draw.circle(color=(0,200,200), radius=200, center=(WIDTH // 2 , HEIGHT // 2), surface=screen)
+    pygame.draw.circle(color=(0,255,0), radius=100, center=(WIDTH // 2 , HEIGHT // 2), surface=screen)
+    pygame.draw.circle(color=(200,200,0), radius=80, center=(WIDTH // 2 , HEIGHT // 2), surface=screen)
+    pygame.draw.circle(color=(255,0,0), radius=50, center=(WIDTH // 2 , HEIGHT // 2), surface=screen)
+    
+    
     pygame.draw.line(color=(255,255,0), 
                      surface=screen, 
                      width=10, 
@@ -224,7 +244,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     pygame.display.flip()
     clock.tick(60)
 
-#save model
+print("Total Reward: ", TOTAL_REWARD)
 with open(saveAgentTo, "wb") as f:
-    pickle.dump({"q_table": agent.q_table}, f)
-print(f"Agent data saved.")
+    pickle.dump(agent.q_network.state_dict(), f)
+print("Agent model saved.")
