@@ -4,14 +4,14 @@ import random
 import pickle  # To save and load agent data
 
 # Import your QLearningAgent class
-from RLAgent import QLearningAgent
+from old_files.RLAgent import QLearningAgent
 from DQN import DQNAgent, DQNNetwork
 
 
 
 #load file
-loadAgentFile = "models/dqn_fuel.pkl"
-saveAgentTo = "models/dqn_fuel.pkl"
+loadAgentFile = "dqn_models/5000dqn.pkl"
+saveAgentTo = "dqn_models/5000dqn.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -28,15 +28,18 @@ GREEN = (0, 255, 0)
 
 # Globals
 SIZEFACTOR = 0.4
-SPEEDFACTOR = 1 #for testing
+SPEEDFACTOR = 1
 ANGLE = 10
 GRAVITY = 0.01
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
-NUM_OF_EPISODES = 10
+NUM_OF_EPISODES = 5000
 EPISODIAL_REWARD = 0
 TOTAL_REWARD = 0
 TOTAL_HITS = 0
+TICKRATE = 60
+TICKRATE_FACTOR = 10
+TICKRATE = TICKRATE * TICKRATE_FACTOR
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
@@ -200,7 +203,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
 
     current_distance = calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"])
 
-    if current_distance < 50: #SHIP HITS THE CAN
+    if current_distance < 50: #SHIP HITS THE FUEL
         reward = reward + 100
         TOTAL_HITS = TOTAL_HITS + 1
         reset_game()
@@ -246,7 +249,7 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     draw_spaceship(spaceship["x"], spaceship["y"], spaceship["angle"], spaceship_img)
     draw_fuel(x=fuel["x"], y=fuel["y"], image=fuel_img)
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(TICKRATE)
 
 print("Total Reward: ", TOTAL_REWARD, " || Total Hits: ", TOTAL_HITS)
 with open(saveAgentTo, "wb") as f:
