@@ -8,8 +8,8 @@ from old_files.RLAgent import QLearningAgent
 from DQN import DQNAgent, DQNNetwork
 
 #load file
-loadAgentFile = "dqn_models/-__-.pkl"
-saveAgentTo = "dqn_models/-__-.pkl"
+loadAgentFile = "dqn_models/____.pkl"
+saveAgentTo = "dqn_models/1000.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -32,7 +32,7 @@ FRICTION = 1
 
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
-NUM_OF_EPISODES = 250
+NUM_OF_EPISODES = 1000
 EPISODIAL_REWARD = 0
 TOTAL_REWARD = 0
 TOTAL_HITS = 0
@@ -40,7 +40,7 @@ TICKRATE = 60
 TICKRATE_FACTOR = 10
 TICKRATE = TICKRATE * TICKRATE_FACTOR
 
-STEP_LIMIT = 500
+STEP_LIMIT = 400
 step_counter = 0
 
 # Clock for controlling frame rate
@@ -104,8 +104,12 @@ except FileNotFoundError:
 
 # Function to reset the spaceship
 def reset_game():
-    spaceship["x"] = 3 * WIDTH // 4
-    spaceship["y"] = 7 * HEIGHT // 8
+    #spaceship["x"] = 3 * WIDTH // 4
+    #spaceship["y"] = 7 * HEIGHT // 8
+
+    spaceship["x"] = random.randint(int(0.1 * WIDTH), int(0.9 * WIDTH))
+    spaceship["y"] = random.randint(int(0.1 * HEIGHT), int(0.9 * HEIGHT))
+
     spaceship["velocity_x"] = 0
     spaceship["velocity_y"] = 0
     spaceship["fuel"] = 100
@@ -162,9 +166,9 @@ def update_spaceship(action):
 def draw_spaceship(x, y, direction, image):
     angle = {
         "up": 0,
-        "right": 90,
+        "right": 270,
         "down": 180,
-        "left": 270,
+        "left": 90,
     }.get(direction, 0)
     rotated_image = pygame.transform.rotate(image, angle)
     rect = rotated_image.get_rect(center=(x, y))
