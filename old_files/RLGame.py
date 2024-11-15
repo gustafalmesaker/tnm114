@@ -4,7 +4,7 @@ import random
 import pickle  # To save and load agent data
 
 # Import your QLearningAgent class
-from RLAgent import QLearningAgent
+from old_files.RLAgent import QLearningAgent
 
 # Initialize Pygame
 pygame.init()
