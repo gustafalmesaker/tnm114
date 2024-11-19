@@ -8,8 +8,8 @@ from old_files.RLAgent import QLearningAgent
 from DQN import DQNAgent, DQNNetwork
 
 #load file
-loadAgentFile = "dqn_models/____.pkl"
-saveAgentTo = "dqn_models/1000.pkl"
+loadAgentFile = "dqn_models/small_test.pkl"
+saveAgentTo = "dqn_models/small_test.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -32,13 +32,21 @@ FRICTION = 1
 
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
-NUM_OF_EPISODES = 1000
+NUM_OF_EPISODES = 500
 EPISODIAL_REWARD = 0
 TOTAL_REWARD = 0
 TOTAL_HITS = 0
 TICKRATE = 60
 TICKRATE_FACTOR = 10
 TICKRATE = TICKRATE * TICKRATE_FACTOR
+
+#reward FLAGs
+FLAG1= False
+FLAG2= False 
+FLAG3= False
+FLAG4= False 
+FLAG5 = False
+
 
 STEP_LIMIT = 400
 step_counter = 0
@@ -117,6 +125,7 @@ def reset_game():
     spaceship["direction"] = "up"
     fuel["x"] = WIDTH // 2
     fuel["y"] = HEIGHT // 2
+
 
 def update_fuel():
     fuel["x"] = random.randint(int(0.1 * WIDTH), int(0.9 * WIDTH))
@@ -213,32 +222,44 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     #Reward for the RL agent
     reward = 0
 
+    
     # Check boundaries
     if spaceship["x"] < 0 or spaceship["x"] > WIDTH or spaceship["y"] < 0 or spaceship["y"] > HEIGHT:
         reward = reward - 100  # Out of bounds penalty
         print("Episode",spaceship["episode"],"is over! || Reward: ", EPISODIAL_REWARD)
         TOTAL_REWARD = EPISODIAL_REWARD + TOTAL_REWARD
         EPISODIAL_REWARD = 0
+        FLAG1= False
+        FLAG2= False 
+        FLAG3= False
+        FLAG4= False 
+        FLAG5 = False
         reset_game()
         continue
 
 
     current_distance = calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"])
 
+
     if current_distance < 50:
         reward = reward + 500
         TOTAL_HITS = TOTAL_HITS + 1
         update_fuel()
-    elif current_distance < 75:
+    elif current_distance < 100 and FLAG5 is False:
+        reward = reward + 75
+        FLAG5 = True
+    elif current_distance < 125 and FLAG4 is False:
+        reward = reward + 50
+        FLAG4 = True
+    elif current_distance < 150 and FLAG3 is False:
+        reward = reward + 25
+        FLAG3 = True
+    elif current_distance < 200 and FLAG2 is False:
         reward = reward + 10
-    elif current_distance < 100:
-        reward = reward + 7
-    elif current_distance < 150:
-        reward = reward + 4
-    elif current_distance < 200:
-        reward = reward + 2
-    elif current_distance < 300:
-        reward = reward + 1
+        FLAG2 = True
+    elif current_distance < 300 and FLAG1 is False:
+        FLAG1 = True
+        reward = reward + 5
 
     
 
@@ -250,12 +271,13 @@ while spaceship["episode"] < NUM_OF_EPISODES:
     ]
 
     EPISODIAL_REWARD = EPISODIAL_REWARD + reward
-    # Store experience in replay memory
+
+
+    ######################################################################
+    #THESE 2 LINE CHANGE TRAIN / TESTING    
     agent.store_experience(state, action, reward, next_state, done=False)
-
-    # Update the DQN model
     agent.update_q_network()
-
+    ######################################################################
 
     # Draw fueltext
     fuel_text = font.render(f"Fuel: {spaceship['fuel']:.1f}%", True, WHITE)
@@ -278,6 +300,11 @@ while spaceship["episode"] < NUM_OF_EPISODES:
         print("Step limit reached for Episode", spaceship["episode"], "|| Reward:", EPISODIAL_REWARD)
         TOTAL_REWARD += EPISODIAL_REWARD
         EPISODIAL_REWARD = 0
+        FLAG1= False
+        FLAG2= False 
+        FLAG3= False
+        FLAG4= False 
+        FLAG5 = False
         reset_game()
         step_counter = 0  # Reset step counter
 
