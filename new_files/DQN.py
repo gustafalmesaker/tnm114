@@ -18,7 +18,7 @@ class DQNNetwork(nn.Module):
         return self.fc3(x)
 
 class DQNAgent:
-    def __init__(self, state_size, action_size, alpha=0.001, gamma=0.97, epsilon=0.95, epsilon_min=0.05, epsilon_decay=0.99, memory_size=10000, batch_size=64, target_update=10):
+    def __init__(self, state_size, action_size, alpha=0.001, gamma=0.99, epsilon=1.0, epsilon_min=0.1, epsilon_decay=0.995, memory_size=50000, batch_size=64, target_update=1000):
         self.state_size = state_size
         self.action_size = action_size
         self.alpha = alpha  # Learning rate

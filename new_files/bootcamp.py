@@ -1,17 +1,15 @@
+import random
 import pygame
 import math
-import random
 import pickle  # To save and load agent data
 
 # Import your QLearningAgent class
 from old_files.RLAgent import QLearningAgent
 from DQN import DQNAgent, DQNNetwork
 
-
-
 #load file
-loadAgentFile = "dqn_models/5000dqn.pkl"
-saveAgentTo = "dqn_models/5000dqn.pkl"
+loadAgentFile = "dqn_models/axeltestny___.pkl"
+saveAgentTo = "dqn_models/axeltestny500igen.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -29,17 +27,29 @@ GREEN = (0, 255, 0)
 # Globals
 SIZEFACTOR = 0.4
 SPEEDFACTOR = 1
-ANGLE = 10
-GRAVITY = 0.01
+
+FRICTION = 1
+
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
-NUM_OF_EPISODES = 10
+NUM_OF_EPISODES = 250
 EPISODIAL_REWARD = 0
 TOTAL_REWARD = 0
 TOTAL_HITS = 0
 TICKRATE = 60
-TICKRATE_FACTOR = 1
+TICKRATE_FACTOR = 4
 TICKRATE = TICKRATE * TICKRATE_FACTOR
+
+#reward FLAGs
+FLAG1= False
+FLAG2= False 
+FLAG3= False
+FLAG4= False 
+FLAG5 = False
+
+
+STEP_LIMIT = 400
+step_counter = 0
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
@@ -64,15 +74,14 @@ font = pygame.font.SysFont(None, 36)
 spaceship = {
     "x": 3 * WIDTH // 4,
     "y": 6 * HEIGHT // 8,
-    "angle": 0,  
     "velocity_x": 0,
     "velocity_y": 0,
-    "thrust": 0.2 * SPEEDFACTOR,
-    "gravity": GRAVITY * SPEEDFACTOR,
     "width": spaceship_img.get_width(),
     "height": spaceship_img.get_height(),
     "fuel": 100,
-    "episode": 1
+    "episode": 1,
+    "direction": "up",
+    "max_velocity": 10
 }
 
 fuel = {
@@ -81,11 +90,9 @@ fuel = {
 }
 
 # Define state and action size
-state_size = 6  
-action_size = 4
+state_size = 4
+action_size = 5
 
-# Create a Q-learning agent
-#agent = QLearningAgent(state_size, action_size)
 
 # Instantiate the DQN agent
 agent = DQNAgent(state_size, action_size)
@@ -105,21 +112,75 @@ except FileNotFoundError:
 
 # Function to reset the spaceship
 def reset_game():
-    spaceship["x"] = 3 * WIDTH // 4
-    spaceship["y"] = 7 * HEIGHT // 8
-    spaceship["angle"] = 0
+    #spaceship["x"] = 3 * WIDTH // 4
+    #spaceship["y"] = 7 * HEIGHT // 8
+
+    spaceship["x"] = random.randint(int(0.1 * WIDTH), int(0.9 * WIDTH))
+    spaceship["y"] = random.randint(int(0.1 * HEIGHT), int(0.9 * HEIGHT))
+
     spaceship["velocity_x"] = 0
     spaceship["velocity_y"] = 0
     spaceship["fuel"] = 100
     spaceship["episode"] += 1
-    
-    
+    spaceship["direction"] = "up"
+    fuel["x"] = WIDTH // 2
+    fuel["y"] = HEIGHT // 2
 
-# Draw spaceship function
-def draw_spaceship(x, y, angle, image):
-    """Draws the spaceship using the provided image, rotated by the angle."""
-    rotated_image = pygame.transform.rotate(image, -angle)  # Rotate image based on angle
-    rect = rotated_image.get_rect(center=(x, y))  # Center the rotated image
+
+def update_fuel():
+    fuel["x"] = random.randint(int(0.1 * WIDTH), int(0.9 * WIDTH))
+    fuel["y"] = random.randint(int(0.1 * HEIGHT), int(0.9 * HEIGHT))
+
+
+def update_spaceship(action):
+    global spaceship
+
+    friction = 1
+
+    if action == 0:  # Do nothing
+        if spaceship["velocity_x"] > 0:
+            spaceship["velocity_x"] -= friction
+        elif spaceship["velocity_x"] < 0:
+            spaceship["velocity_x"] += friction
+        if spaceship["velocity_y"] > 0:
+            spaceship["velocity_y"] -= friction
+        elif spaceship["velocity_y"] < 0:
+            spaceship["velocity_y"] += friction
+
+    elif action == 1:  # Move left
+        spaceship["velocity_x"] = max(-spaceship["max_velocity"], spaceship["velocity_x"] - 2) if spaceship["direction"] == "left" else -1
+        spaceship["direction"] = "left"
+
+    elif action == 2:  # Move right
+        spaceship["velocity_x"] = min(spaceship["max_velocity"], spaceship["velocity_x"] + 2) if spaceship["direction"] == "right" else 1
+        spaceship["direction"] = "right"
+
+    elif action == 3:  # Move up
+        spaceship["velocity_y"] = max(-spaceship["max_velocity"], spaceship["velocity_y"] - 2) if spaceship["direction"] == "up" else -1
+        spaceship["direction"] = "up"
+
+    elif action == 4:  # Move down
+        spaceship["velocity_y"] = min(spaceship["max_velocity"], spaceship["velocity_y"] + 2) if spaceship["direction"] == "down" else 1
+        spaceship["direction"] = "down"
+
+    # Update position based on velocity
+    spaceship["x"] += spaceship["velocity_x"]
+    spaceship["y"] += spaceship["velocity_y"]
+
+    # Ensure the spaceship stays within bounds
+    #spaceship["x"] = max(0, min(WIDTH, spaceship["x"]))
+    #spaceship["y"] = max(0, min(HEIGHT, spaceship["y"]))
+
+# Adjust drawing to reflect direction
+def draw_spaceship(x, y, direction, image):
+    angle = {
+        "up": 0,
+        "right": 270,
+        "down": 180,
+        "left": 90,
+    }.get(direction, 0)
+    rotated_image = pygame.transform.rotate(image, angle)
+    rect = rotated_image.get_rect(center=(x, y))
     screen.blit(rotated_image, rect.topleft)
 
 def draw_fuel(x, y, image):
@@ -130,83 +191,63 @@ def draw_fuel(x, y, image):
 
 
 def calculate_distance(x1, y1, x2, y2):
-    """Calculate the Euclidean distance between two points (x1, y1) and (x2, y2)."""
-    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-
+    return abs(x1 - x2) + abs(y1 - y2) #manhattan distance
+    #return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 
 #succesful_landings = 0
 out_of_fuel = 0
 
-# Modify the game loop to include the new reward function
+
 while spaceship["episode"] < NUM_OF_EPISODES:
+
     screen.fill(BLACK)
     state = [
         spaceship["x"], 
         spaceship["y"],
         fuel["x"], 
-        fuel["y"],
-        math.sqrt(spaceship["velocity_x"]*spaceship["velocity_x"] + spaceship["velocity_y"] * spaceship["velocity_y"]),
-        spaceship["angle"] / 360
+        fuel["y"]
     ]
 
 
     action = agent.choose_action(state)
 
-
-    fuel_consumtion = 0.5
-    # Map actions to spaceship controls
-    if action == 0:
-        doNothing = True
-    elif action == 1:  # Rotate left
-        spaceship["angle"] -= ANGLE
-    elif action == 2:  # Rotate right
-        spaceship["angle"] += ANGLE
-    elif action == 3:  # Thrust
-        if spaceship["fuel"] > 0:
-            spaceship["velocity_x"] += spaceship["thrust"] * math.sin(math.radians(spaceship["angle"]))
-            spaceship["velocity_y"] -= spaceship["thrust"] * math.cos(math.radians(spaceship["angle"]))
-            spaceship["fuel"] -= fuel_consumtion
-    
+    update_spaceship(action)
     
     #Display action
     action_text = font.render(f"Action: {action:.0f}", True, WHITE)
     screen.blit(action_text, (10, 10))
-        
 
-    # Apply gravity
-    spaceship["velocity_y"] += spaceship["gravity"]
 
-    # Update spaceship position
-    spaceship["x"] += spaceship["velocity_x"]
-    spaceship["y"] += spaceship["velocity_y"]
+    ######################################################################
+    ##########################--REWARD SYSTEM--###########################
+    ######################################################################
 
     #Reward for the RL agent
     reward = 0
 
+    
     # Check boundaries
     if spaceship["x"] < 0 or spaceship["x"] > WIDTH or spaceship["y"] < 0 or spaceship["y"] > HEIGHT:
-        reward = reward - 100  # Out of bounds penalty
+        reward = reward - 500  # Out of bounds penalty
         print("Episode",spaceship["episode"],"is over! || Reward: ", EPISODIAL_REWARD)
         TOTAL_REWARD = EPISODIAL_REWARD + TOTAL_REWARD
         EPISODIAL_REWARD = 0
+        FLAG1= False
+        FLAG2= False 
+        FLAG3= False
+        FLAG4= False 
+        FLAG5 = False
         reset_game()
         continue
 
-
-    if spaceship["fuel"] < 0:
-        reward -= 10
-        print("Spaceship ran out of fuel! Episode ",spaceship["episode"]," is over!")
-        out_of_fuel += 1
-        EPISODIAL_REWARD = 0
-        continue
 
     current_distance = calculate_distance(spaceship["x"], spaceship["y"], fuel["x"], fuel["y"])
 
-    if current_distance < 50: #SHIP HITS THE FUEL
-        reward = reward + 100
+    if current_distance < 50:
+        reward = reward + 1000
         TOTAL_HITS = TOTAL_HITS + 1
-        reset_game()
+        update_fuel()
     elif current_distance < 75:
         reward = reward + 10
     elif current_distance < 100:
@@ -217,39 +258,58 @@ while spaceship["episode"] < NUM_OF_EPISODES:
         reward = reward + 2
     elif current_distance < 300:
         reward = reward + 1
+    else:
+        ##distance_reward = max(300 - current_distance, 0) / 10  # Reward proportional to closeness
+        ##reward += distance_reward
+        reward = -1
+
+    
 
     next_state = [
         spaceship["x"],
         spaceship["y"],
         fuel["x"],
-        fuel["y"],
-        math.sqrt(spaceship["velocity_x"]*spaceship["velocity_x"] + spaceship["velocity_y"] * spaceship["velocity_y"]),
-        spaceship["angle"] / 360
+        fuel["y"]
     ]
 
     EPISODIAL_REWARD = EPISODIAL_REWARD + reward
-    # Store experience in replay memory
-    agent.store_experience(state, action, reward, next_state, done=False)
 
-    # Update the DQN model
-    agent.update_q_network()
 
+    ######################################################################
+    #THESE 2 LINE CHANGE TRAIN / TESTING    
+    #agent.store_experience(state, action, reward, next_state, done=False)
+    #agent.update_q_network()
+    ######################################################################
 
     # Draw fueltext
     fuel_text = font.render(f"Fuel: {spaceship['fuel']:.1f}%", True, WHITE)
     screen.blit(fuel_text, (WIDTH-200, 10))
     
-    distance_text = font.render(f"Distance: {current_distance:.1f}", True, WHITE)
+    distance_text = font.render(f"Distance: {current_distance}", True, WHITE)
     screen.blit(distance_text, (WIDTH-200, 50))
 
     #Draw line between fuel and ship
     pygame.draw.line(color=(255,255,0), surface=screen, width=10, start_pos=[fuel["x"], fuel["y"]], end_pos=[spaceship["x"], spaceship["y"]])
 
     # Draw spaceship
-    draw_spaceship(spaceship["x"], spaceship["y"], spaceship["angle"], spaceship_img)
+    draw_spaceship(spaceship["x"], spaceship["y"], spaceship["direction"], spaceship_img)
     draw_fuel(x=fuel["x"], y=fuel["y"], image=fuel_img)
     pygame.display.flip()
     clock.tick(TICKRATE)
+
+    step_counter += 1
+    if step_counter >= STEP_LIMIT:
+        reward -= 50
+        print("Step limit reached for Episode", spaceship["episode"], "|| Reward:", EPISODIAL_REWARD)
+        TOTAL_REWARD += EPISODIAL_REWARD
+        EPISODIAL_REWARD = 0
+        FLAG1= False
+        FLAG2= False 
+        FLAG3= False
+        FLAG4= False 
+        FLAG5 = False
+        reset_game()
+        step_counter = 0  # Reset step counter
 
 print("Total Reward: ", TOTAL_REWARD, " || Total Hits: ", TOTAL_HITS)
 with open(saveAgentTo, "wb") as f:

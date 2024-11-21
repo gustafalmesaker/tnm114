@@ -8,8 +8,8 @@ from old_files.RLAgent import QLearningAgent
 from DQN import DQNAgent, DQNNetwork
 
 #load file
-loadAgentFile = "dqn_models/____.pkl"
-saveAgentTo = "dqn_models/1000.pkl"
+loadAgentFile = "dqn_models/10000.pkl"
+saveAgentTo = "dqn_models/20000.pkl"
 
 # Initialize Pygame
 pygame.init()
@@ -32,12 +32,12 @@ FRICTION = 1
 
 FUEL_AREA_WIDTH = (100, WIDTH-100)
 FUEL_AREA_HEIGHT = (100, HEIGHT-100)
-NUM_OF_EPISODES = 1000
+NUM_OF_EPISODES = 10000
 EPISODIAL_REWARD = 0
 TOTAL_REWARD = 0
 TOTAL_HITS = 0
 TICKRATE = 60
-TICKRATE_FACTOR = 10
+TICKRATE_FACTOR = 4
 TICKRATE = TICKRATE * TICKRATE_FACTOR
 
 STEP_LIMIT = 400
