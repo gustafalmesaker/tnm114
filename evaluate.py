@@ -2,6 +2,7 @@ import argparse
 from env import droneEnv
 import logging
 from stable_baselines3 import A2C
+from stable_baselines3 import DQN
 
 #Initialize the argument parser
 parser = argparse.ArgumentParser()
@@ -12,6 +13,7 @@ try:
     env = droneEnv()
     # Load the model using the provided argument or the default value
     model = A2C.load(args.model, env=env)
+    # model = DQN.load(args.model, env=env)
 except Exception as e:
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
