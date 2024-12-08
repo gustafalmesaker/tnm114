@@ -6,7 +6,7 @@ WIDTH, HEIGHT = 800, 800
 TIME_LIMIT    = 60  #How many seconds will it take for one episode?
 
 # Model.learn - Hyperparameter Configure
-total_timesteps = 1000000 #300k
+total_timesteps = 1250000 #300k #1250k SENASTE MODELLEN SOM SKAPADES
 learning_rate  = 0.0003
 ent_coef       = 0.01 
 gamma          = 0.99 
@@ -22,6 +22,15 @@ thruster_amplitude = 0.04
 mass = 1
 arm  = 25
 
+#FPS         = 60
+#gravity     = 0.08
+#diff_amplitude = 0.0006
+#thruster_mean  = 0.04
+#thruster_amplitude = 0.04
+#mass = 1
+#arm  = 25
+
+
 # Model Configure, 
 Model_Save_Path = "./models/" + str(int(total_timesteps/1000)) + "k.zip"  
 # Indicates the model path which will save after the training, 
@@ -30,7 +39,7 @@ tensorboard_log = "./DroneLog/"
 tensorboard_sub_folder = 'new_training' + str(total_timesteps/1000) + "k"
 
 # Display and asset Settings & Function
-BACKGROUND = "assets/sky.png"
+BACKGROUND = "assets/space.png"
 
 # Takes multiple image and provide animation in the game
 def spriter(Type):

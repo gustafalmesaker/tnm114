@@ -26,7 +26,7 @@ class droneEnv(gym.Env):
         pygame.init()
             # VIDEO SETTINGS
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        self.FramePerSec = pygame.time.Clock()
+        #self.FramePerSec = pygame.time.Clock()
         self.background = pygame.image.load(BACKGROUND)
         self.background = pygame.transform.scale(self.background, (WIDTH, HEIGHT))
 
@@ -105,7 +105,7 @@ class droneEnv(gym.Env):
             + angle_target_and_velocity : angle between the to_target vector and the velocity vector
             + distance_to_target : distance to the target
         """
-        angle_to_up     = self.Agent.angle / 180 * pi#* 565.5 # ne gerek var
+        angle_to_up     = self.Agent.angle / 180 * pi
         velocity        = sqrt(self.Agent.x_speed**2 + self.Agent.y_speed**2)
         angle_velocity  = self.Agent.angle_speed
         angle_to_target = np.arctan2(self.y_target - self.Agent.y_position, self.x_target - self.Agent.x_position)
@@ -136,8 +136,8 @@ class droneEnv(gym.Env):
         action = int(action)
             
         # Act every x frames. Range can be altered. 
-        for _ in range(1):
-            self.time += 1 / 60
+        for _ in range(5):
+            self.time += 1 / self.FPS
 
                 # Initialize accelerations
             self.Agent.angular_acceleration = 0
@@ -190,7 +190,7 @@ class droneEnv(gym.Env):
             self.reward += 1 / 60
             
                 # Penalizing to the distance to target (0.00016 is for normalize)
-            self.reward -= dist * 0.000166 # (100*60)
+            self.reward -= dist * 0.000166
 
             if dist < 45:
                 # Reward if agent closes to target

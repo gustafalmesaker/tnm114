@@ -11,7 +11,7 @@ action_size = env.action_space.n
 agent = DQNAgent(state_size=state_size, action_size=action_size)
 
 # Training parameters
-episodes = 1000
+episodes = 5
 target_update_frequency = 10
 
 for e in range(episodes):
@@ -26,7 +26,8 @@ for e in range(episodes):
         agent.remember(state, action, reward, next_state, done)
         state = next_state
         total_reward += reward
-        
+        if done: print(done)
+
         if done:
             print(f"Episode: {e+1}/{episodes}, Score: {total_reward}, Epsilon: {agent.epsilon:.2}")
             break
@@ -39,5 +40,5 @@ for e in range(episodes):
         agent.update_target_model()
         
 # Save the trained DQN model
-agent.model.save("models/dqn_trained_model")
+agent.model.save("models/dqn_models")
 env.close()
