@@ -126,17 +126,16 @@ class droneEnv(gym.Env):
             ]
         ).astype(np.float16)
 
-    def step(self, action):
-        
+    def step(self, action, render_frequency = 10):
         self.render()
         self.reward = 0.0
-        self.pace += 1
-        self.pace %= 20
+        
         
         action = int(action)
             
-        # Act every x frames. Range can be altered. 
-        for _ in range(5):
+        for _ in range(render_frequency):
+            self.pace += 1
+            self.pace %= 20
             self.time += 1 / self.FPS
 
                 # Initialize accelerations
@@ -212,10 +211,12 @@ class droneEnv(gym.Env):
                 done = True
                 return self.get_obs(), self.reward, done, self.info
 
+            if self.pace % render_frequency == 0:
+                self.render()
+
         return self.get_obs(), self.reward, False, self.info
 
     def render(self):
-        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.display.quit()

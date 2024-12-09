@@ -6,7 +6,7 @@ WIDTH, HEIGHT = 800, 800
 TIME_LIMIT    = 60  #How many seconds will it take for one episode?
 
 # Model.learn - Hyperparameter Configure
-total_timesteps = 1250000 #300k #1250k SENASTE MODELLEN SOM SKAPADES
+total_timesteps = 1000 #300k
 learning_rate  = 0.0003
 ent_coef       = 0.01 
 gamma          = 0.99 
