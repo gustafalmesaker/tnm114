@@ -6,7 +6,7 @@ from stable_baselines3 import DQN
 
 #Initialize the argument parser
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', type=str, default='models/crayz_bill.zip', help='Path to the model zip file')
+parser.add_argument('--model', type=str, default='models/125k.zip', help='Path to the model zip file')
 args = parser.parse_args()
 
 try:

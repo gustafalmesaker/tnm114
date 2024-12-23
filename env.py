@@ -126,7 +126,7 @@ class droneEnv(gym.Env):
             ]
         ).astype(np.float16)
 
-    def step(self, action, render_frequency = 10):
+    def step(self, action, render_frequency = 1):
         self.render()
         self.reward = 0.0
         
