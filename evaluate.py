@@ -3,6 +3,8 @@ from env import droneEnv
 import logging
 from stable_baselines3 import A2C
 #from stable_baselines3 import DQN
+from torch.utils.tensorboard import SummaryWriter
+from stable_baselines3.common.evaluation import evaluate_policy
 
 #Initialize the argument parser
 parser = argparse.ArgumentParser()
